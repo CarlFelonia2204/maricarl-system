@@ -29,34 +29,27 @@ console.log('📧 Email Transporter configured successfully for:', MY_GMAIL);
 
 // THE STRICT IPv4 TRANSPORTER
 // We removed `service: 'gmail'` so Nodemailer stops forcing IPv6
-const transporter = nodemailer.createTransport({
-    // Direct IPv4 address for Gmail's SMTP server
-    host: "64.233.184.108", 
-    port: 25, // Using port 25 often bypasses the strict TLS handshake hangups
-    secure: false, 
-    auth: {
-        user: "feloniacarl34@gmail.com",
-        pass: process.env.MY_APP_PASSWORD, 
-    },
-    tls: {
-        // Essential: This tells Gmail we are connecting via its IP but identifies as its domain
-        servername: 'smtp.gmail.com',
-        rejectUnauthorized: false
-    },
-    // Extreme patience for Render's free tier
-    connectionTimeout: 60000, // 60 seconds
-    greetingTimeout: 60000,
-    socketTimeout: 60000
-});
+// 1. At the top of server.js
+const sgMail = require('@sendgrid/mail');
+sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
-// Verification check
-transporter.verify((error, success) => {
-    if (error) {
-        console.log("❌ FINAL EMAIL ERROR:", error.message);
-    } else {
-        console.log("✅ SYSTEM FULLY OPERATIONAL - EMAILS READY");
+// 2. Replace your old sendEmail function with this:
+const sendEmail = async (bookingDetails) => {
+    const msg = {
+        to: 'feloniacarl34@gmail.com', // Your corrected email
+        from: 'your-verified-sendgrid-sender@email.com', // Must be verified in SendGrid
+        subject: 'New Booking Received!',
+        text: `New booking from ${bookingDetails.name}`,
+        html: `<strong>New booking from ${bookingDetails.name}</strong>`,
+    };
+
+    try {
+        await sgMail.send(msg);
+        console.log('✅ Email sent via SendGrid Web API');
+    } catch (error) {
+        console.error('❌ SendGrid Error:', error.response ? error.response.body : error.message);
     }
-});
+};
 
 app.use('/public', express.static('public'));
 
