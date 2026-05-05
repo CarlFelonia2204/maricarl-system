@@ -30,34 +30,29 @@ console.log('📧 Email Transporter configured successfully for:', MY_GMAIL);
 // THE STRICT IPv4 TRANSPORTER
 // We removed `service: 'gmail'` so Nodemailer stops forcing IPv6
 const transporter = nodemailer.createTransport({
-    // We use the common name but force the family to 4 (IPv4)
     host: "smtp.gmail.com",
-    port: 465, 
-    secure: true,
+    port: 587,
+    secure: false, // Must be false for port 587
     auth: {
-        user: "feloniacarl34@gmail.com", //
+        user: "feloniacarl34@gmail.com",
         pass: process.env.MY_APP_PASSWORD,
     },
-    // This forces the connection to stay on IPv4
+    // FORCING IPV4 ONLY
     family: 4, 
-    // Increased timeouts to handle the "Cold Start" lag on Render
-    connectionTimeout: 20000, 
-    greetingTimeout: 20000,
-    socketTimeout: 20000,
     tls: {
-        // Prevents the "Self-signed certificate" error common in cloud environments
-        rejectUnauthorized: false 
+        // Essential for port 587 and cloud hosting
+        ciphers: 'SSLv3',
+        rejectUnauthorized: false
     }
 });
 
-// Add this verification block to your server.js
-// It will tell you in the logs exactly why it's failing when it starts up
-transporter.verify(function (error, success) {
-  if (error) {
-    console.log("Transporter Error:", error);
-  } else {
-    console.log("Server is ready to take our messages");
-  }
+// This is the key part to check if it's working immediately
+transporter.verify((error, success) => {
+    if (error) {
+        console.log("❌ Email System Error:", error.message);
+    } else {
+        console.log("✅ Email System is Ready!");
+    }
 });
 
 app.use('/public', express.static('public'));
