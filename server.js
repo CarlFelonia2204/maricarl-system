@@ -267,6 +267,13 @@ app.post('/api/bookings', async (req, res) => {
             if(p) promoDiscount = p.discount;
         }
 
+        // --- STOP THE LOADING SPINNER HERE ---
+        // We tell the phone the booking is safe in the database first.
+        res.status(201).json(newBooking);
+
+        // --- EVERYTHING BELOW RUNS IN THE BACKGROUND ---
+        // The user's phone is already showing "Success" while this runs.
+        
         const formattedCheckIn = formatDate(newBooking.checkIn);
         const formattedCheckOut = formatDate(newBooking.checkOut);
         const stayDates = newBooking.stayType === 'day' ? formattedCheckIn : `${formattedCheckIn} to ${formattedCheckOut}`;
@@ -285,7 +292,6 @@ app.post('/api/bookings', async (req, res) => {
         const adminContent = `
             <p>Hello Admin,</p>
             <p>A new reservation request has been submitted and requires your review.</p>
-            
             <h3 style="color: #141414; margin-top: 35px; font-size: 15px; text-transform: uppercase; letter-spacing: 2px; font-family: 'Cinzel', serif; font-weight: bold;">Guest Information</h3>
             <table style="width: 100%; border-collapse: collapse; margin-bottom: 25px;">
                 <tr style="border-bottom: 1px solid #E2E8F0;"><td style="padding: 12px 0; color: #64748B; font-weight: bold;">Name:</td><td style="padding: 12px 0; text-align: right; font-weight: bold; color: #141414;">${newBooking.guestName}</td></tr>
@@ -304,21 +310,23 @@ app.post('/api/bookings', async (req, res) => {
                 ${promoRow}
                 <tr style="background-color: #141414; color: #FFF;"><td style="padding: 15px;"><strong>Final Total:</strong></td><td style="padding: 15px; text-align: right; font-size: 18px; color: #C5A059;"><strong>₱${newBooking.totalCost.toLocaleString('en-PH')}</strong></td></tr>
             </table>
-            
             <p style="margin-top: 30px; text-align: center; color: #64748B;">Log in to the Admin OS to approve or reject this booking.</p>
         `;
 
-        try {
-            await transporter.sendMail({
-                from: `"Maricarl Resort" <${MY_GMAIL}>`, 
-                to: ADMIN_EMAIL, 
-                subject: `New Reservation Request: ${newBooking.guestName}`,
-                html: generateHTML('Action Required: New Booking', adminContent)
-            });
-        } catch(e) { console.log("Email error:", e.message); }
+        // We run the email function but don't 'await' it for the user's sake
+        transporter.sendMail({
+            from: `"Maricarl Resort" <${MY_GMAIL}>`, 
+            to: ADMIN_EMAIL, 
+            subject: `New Reservation Request: ${newBooking.guestName}`,
+            html: generateHTML('Action Required: New Booking', adminContent)
+        }).catch(e => console.log("Background email error:", e.message));
 
-        res.status(201).json(newBooking);
-    } catch (error) { res.status(500).json({ error: 'Failed to create booking' }); }
+    } catch (error) { 
+        console.error("Critical Error:", error);
+        if (!res.headersSent) {
+            res.status(500).json({ error: 'Failed to create booking' }); 
+        }
+    }
 });
 
 app.get('/api/bookings', async (req, res) => {
