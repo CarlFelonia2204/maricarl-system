@@ -1,8 +1,7 @@
 const dns = require('dns');
 dns.setServers(['8.8.8.8', '8.8.4.4']); // Bypasses your ISP's DNS block
 
-// ... the rest of your code
-require('dotenv').config(); // THIS IS NEW
+require('dotenv').config(); 
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -10,7 +9,6 @@ const nodemailer = require('nodemailer');
 
 const app = express();
 app.get('/', (req, res) => {
-
   res.send('Maricarl Resort Backend is Live and Running!');
 });
 app.use(express.json());
@@ -19,21 +17,18 @@ app.use(cors());
 // ==========================================
 // 1. GLOBAL EMAIL & SERVER CONFIGURATION
 // ==========================================
-const MY_GMAIL = process.env.MY_GMAIL;        // Pulls from .env
-const MY_APP_PASS = process.env.MY_APP_PASS;  // Pulls from .env
-const ADMIN_EMAIL = 'feloniacarl34@gmail.com';// Your receiving admin email
+const EMAIL_USER = process.env.EMAIL_USER; 
+const ADMIN_EMAIL = 'feloniacarl34@gmail.com'; 
 
+// THE "ULTIMATE CLOUD" TRANSPORTER
 const transporter = nodemailer.createTransport({
-  host: '74.125.202.108', // This is the direct IPv4 for smtp.gmail.com
-  port: 587,
-  secure: false, 
+  service: 'gmail', // Let Nodemailer handle Google's cloud settings directly
   auth: {
-    user: process.env.EMAIL_USER,
+    user: EMAIL_USER,
     pass: process.env.EMAIL_PASS
   },
   tls: {
-    rejectUnauthorized: false,
-    servername: 'smtp.gmail.com' // Crucial when using a direct IP
+    rejectUnauthorized: false
   }
 });
 
@@ -98,7 +93,7 @@ const bookingSchema = new mongoose.Schema({
     pax: Number, totalCost: Number, promoCode: String, 
     status: { type: String, default: 'Pending' }, 
     thankYouSent: { type: Boolean, default: false }, 
-    reminderSent: { type: Boolean, default: false }, // NEW: Tracks if Payment Reminder was sent
+    reminderSent: { type: Boolean, default: false },
     createdAt: { type: Date, default: Date.now }
 });
 const Booking = mongoose.model('Booking', bookingSchema);
@@ -113,7 +108,6 @@ const Promo = mongoose.model('Promo', promoSchema);
 setInterval(async () => {
     try {
         const now = new Date();
-        // Look for bookings where EITHER the thank you OR the reminder hasn't been sent
         const pastBookings = await Booking.find({ 
             status: 'Confirmed', 
             $or: [{ thankYouSent: false }, { reminderSent: false }] 
@@ -128,9 +122,7 @@ setInterval(async () => {
             const [hours, minutes] = timeStr.split(':');
             const checkoutDate = new Date(year, month - 1, day, hours, minutes);
             
-            // If the checkout time has arrived or passed
             if (now >= checkoutDate) {
-                // If PAID -> Send Thank You
                 if (b.paymentStatus === 'Paid' && !b.thankYouSent) {
                     const thankYouContent = `
                         <p>Dear <strong>${b.guestName}</strong>,</p>
@@ -142,18 +134,16 @@ setInterval(async () => {
                         <p>We hope to welcome you back again soon.</p>
                         <p>Warm regards,<br><strong>The Maricarl Resort Team</strong></p>
                     `;
-                    await transporter.sendMail({
-                        from: `"Maricarl Resort" <${MY_GMAIL}>`,
+                    transporter.sendMail({
+                        from: `"Maricarl Resort" <${EMAIL_USER}>`,
                         to: b.email,
                         subject: `Thank You for Staying at Maricarl Resort!`,
                         html: generateHTML('We Hope You Enjoyed Your Stay', thankYouContent)
-                    });
+                    }).catch(e => console.log(e.message));
                     
                     b.thankYouSent = true;
                     await b.save();
-                    console.log(`🌟 Automated 'Thank You' email sent to: ${b.guestName}`);
                 } 
-                // If NOT PAID -> Send Reminder
                 else if (b.paymentStatus !== 'Paid' && !b.reminderSent) {
                     const reminderContent = `
                         <p>Dear <strong>${b.guestName}</strong>,</p>
@@ -161,16 +151,15 @@ setInterval(async () => {
                         <p>Please proceed to our staff or complete your GCash transfer so we can officially mark your reservation as paid.</p>
                         <p>Thank you!</p>
                     `;
-                    await transporter.sendMail({
-                        from: `"Maricarl Resort" <${MY_GMAIL}>`,
+                    transporter.sendMail({
+                        from: `"Maricarl Resort" <${EMAIL_USER}>`,
                         to: b.email,
                         subject: `Payment Reminder - Maricarl Resort`,
                         html: generateHTML('Pending Balance Reminder', reminderContent)
-                    });
+                    }).catch(e => console.log(e.message));
                     
                     b.reminderSent = true;
                     await b.save();
-                    console.log(`⚠️ Automated 'Payment Reminder' email sent to: ${b.guestName}`);
                 }
             }
         }
@@ -196,17 +185,20 @@ app.get('/api/bookings/unavailable', async (req, res) => {
     } catch (error) { res.status(500).json([]); }
 });
 
-// ADMIN MARK AS PAID ENDPOINT (Sends Receipt + Immediately sends Thank You if checkout passed)
+// ADMIN MARK AS PAID ENDPOINT 
 app.patch('/api/bookings/:id/pay', async (req, res) => {
     try {
-        const booking = await Booking.findByIdAndUpdate(req.params.id, { paymentStatus: 'Paid' }, { new: true });
+        const booking = await Booking.findByIdAndUpdate(req.params.id, { paymentStatus: 'Paid' }, { returnDocument: 'after' });
         if (!booking) return res.status(404).json({ error: 'Booking not found' });
         
+        // 1. RESPOND IMMEDIATELY TO UI
+        res.status(200).json(booking);
+
+        // 2. BACKGROUND EMAIL PROCESS
         const formattedCheckIn = formatDate(booking.checkIn);
         const formattedCheckOut = formatDate(booking.checkOut);
         const stayDates = booking.stayType === 'day' ? formattedCheckIn : `${formattedCheckIn} to ${formattedCheckOut}`;
         
-        // 1. ALWAYS SEND THE RECEIPT IMMEDIATELY
         const receiptContent = `
             <p>Dear <strong>${booking.guestName}</strong>,</p>
             <p>This email is to confirm that we have successfully received your payment of <strong style="color: #059669;">₱${booking.totalCost.toLocaleString('en-PH')}</strong>.</p>
@@ -220,14 +212,13 @@ app.patch('/api/bookings/:id/pay', async (req, res) => {
             <p style="margin-top: 35px; text-align: center;">Thank you!</p>
         `;
 
-        await transporter.sendMail({
-            from: `"Maricarl Resort" <${MY_GMAIL}>`,
+        transporter.sendMail({
+            from: `"Maricarl Resort" <${EMAIL_USER}>`,
             to: booking.email,
             subject: `Payment Confirmed - Maricarl Resort`,
             html: generateHTML('Payment Received', receiptContent)
-        });
+        }).catch(e => console.log(e.message));
 
-        // 2. CHECK IF CHECK-OUT HAS ALREADY PASSED. IF YES, FIRE THANK YOU EMAIL NOW.
         const checkOutDateStr = booking.stayType === 'day' ? booking.checkIn : booking.checkOut;
         const timeStr = booking.checkOutTime || '12:00'; 
         
@@ -248,21 +239,20 @@ app.patch('/api/bookings/:id/pay', async (req, res) => {
                     <p>Warm regards,<br><strong>The Maricarl Resort Team</strong></p>
                 `;
                 
-                await transporter.sendMail({
-                    from: `"Maricarl Resort" <${MY_GMAIL}>`,
+                transporter.sendMail({
+                    from: `"Maricarl Resort" <${EMAIL_USER}>`,
                     to: booking.email,
                     subject: `Thank You for Staying at Maricarl Resort!`,
                     html: generateHTML('We Hope You Enjoyed Your Stay', thankYouContent)
-                });
+                }).catch(e => console.log(e.message));
                 
                 booking.thankYouSent = true;
                 await booking.save();
-                console.log(`🌟 Mark Paid Triggered: 'Thank You' email sent to: ${booking.guestName}`);
             }
         }
-
-        res.status(200).json(booking);
-    } catch(e) { res.status(500).json({ error: 'Failed' }); }
+    } catch(e) { 
+        if (!res.headersSent) res.status(500).json({ error: 'Failed' }); 
+    }
 });
 
 app.post('/api/bookings', async (req, res) => {
@@ -272,17 +262,14 @@ app.post('/api/bookings', async (req, res) => {
         
         let promoDiscount = 0;
         if(req.body.promoCode && req.body.promoCode !== 'None') {
-            const p = await Promo.findOneAndUpdate({ code: req.body.promoCode }, { $inc: { usageCount: 1 } });
+            const p = await Promo.findOneAndUpdate({ code: req.body.promoCode }, { $inc: { usageCount: 1 } }, { returnDocument: 'after' });
             if(p) promoDiscount = p.discount;
         }
 
-        // --- STOP THE LOADING SPINNER HERE ---
-        // We tell the phone the booking is safe in the database first.
+        // --- 1. RESPOND IMMEDIATELY TO UI ---
         res.status(201).json(newBooking);
 
-        // --- EVERYTHING BELOW RUNS IN THE BACKGROUND ---
-        // The user's phone is already showing "Success" while this runs.
-        
+        // --- 2. EMAILS IN BACKGROUND ---
         const formattedCheckIn = formatDate(newBooking.checkIn);
         const formattedCheckOut = formatDate(newBooking.checkOut);
         const stayDates = newBooking.stayType === 'day' ? formattedCheckIn : `${formattedCheckIn} to ${formattedCheckOut}`;
@@ -322,9 +309,8 @@ app.post('/api/bookings', async (req, res) => {
             <p style="margin-top: 30px; text-align: center; color: #64748B;">Log in to the Admin OS to approve or reject this booking.</p>
         `;
 
-        // We run the email function but don't 'await' it for the user's sake
         transporter.sendMail({
-            from: `"Maricarl Resort" <${MY_GMAIL}>`, 
+            from: `"Maricarl Resort" <${EMAIL_USER}>`, 
             to: ADMIN_EMAIL, 
             subject: `New Reservation Request: ${newBooking.guestName}`,
             html: generateHTML('Action Required: New Booking', adminContent)
@@ -332,9 +318,7 @@ app.post('/api/bookings', async (req, res) => {
 
     } catch (error) { 
         console.error("Critical Error:", error);
-        if (!res.headersSent) {
-            res.status(500).json({ error: 'Failed to create booking' }); 
-        }
+        if (!res.headersSent) res.status(500).json({ error: 'Failed to create booking' }); 
     }
 });
 
@@ -356,8 +340,13 @@ app.get('/api/bookings/search', async (req, res) => {
 app.patch('/api/bookings/:id/status', async (req, res) => {
     try {
         const { status } = req.body; 
-        const updated = await Booking.findByIdAndUpdate(req.params.id, { status: status }, { new: true });
+        const updated = await Booking.findByIdAndUpdate(req.params.id, { status: status }, { returnDocument: 'after' });
+        if (!updated) return res.status(404).json({ error: 'Not found' });
         
+        // 1. RESPOND IMMEDIATELY TO UI
+        res.status(200).json(updated);
+
+        // 2. BACKGROUND EMAIL PROCESS
         if (status === 'Confirmed') {
             let promoDiscount = 0;
             if(updated.promoCode && updated.promoCode !== 'None') {
@@ -423,17 +412,16 @@ app.patch('/api/bookings/:id/status', async (req, res) => {
                 <p style="margin-top: 35px; text-align: center;">We look forward to hosting you!</p>
             `;
 
-            try {
-                await transporter.sendMail({
-                    from: `"Maricarl Resort" <${MY_GMAIL}>`, 
-                    to: updated.email,
-                    subject: `Reservation Confirmed - Maricarl Resort`,
-                    html: generateHTML('Your Booking is Confirmed', customerContent)
-                });
-            } catch(e) { console.log("Email error:", e.message); }
+            transporter.sendMail({
+                from: `"Maricarl Resort" <${EMAIL_USER}>`, 
+                to: updated.email,
+                subject: `Reservation Confirmed - Maricarl Resort`,
+                html: generateHTML('Your Booking is Confirmed', customerContent)
+            }).catch(e => console.log("Email error:", e.message));
         }
-        res.status(200).json(updated);
-    } catch (error) { res.status(500).json({ error: 'Failed' }); }
+    } catch (error) { 
+        if (!res.headersSent) res.status(500).json({ error: 'Failed' }); 
+    }
 });
 
 app.delete('/api/bookings/:id', async (req, res) => {
@@ -444,6 +432,11 @@ app.delete('/api/bookings/:id', async (req, res) => {
         const bookingToDelete = await Booking.findById(bookingId);
         if (!bookingToDelete) return res.status(404).json({ error: 'Booking not found' });
 
+        // 1. DELETE FROM DB & RESPOND IMMEDIATELY TO UI
+        await Booking.findByIdAndDelete(bookingId);
+        res.status(200).json({ message: 'Reservation successfully deleted.' });
+
+        // 2. EMAILS IN BACKGROUND
         const formattedCheckIn = formatDate(bookingToDelete.checkIn);
         const formattedCheckOut = formatDate(bookingToDelete.checkOut);
         const stayDates = bookingToDelete.stayType === 'day' ? formattedCheckIn : `${formattedCheckIn} to ${formattedCheckOut}`;
@@ -455,14 +448,12 @@ app.delete('/api/bookings/:id', async (req, res) => {
                 <p>If you believe this was a mistake, or if you would like to book a different date, please submit a new reservation request on our website.</p>
                 <p>Thank you for considering Maricarl Resort.</p>
             `;
-            try {
-                await transporter.sendMail({
-                    from: `"Maricarl Resort" <${MY_GMAIL}>`,
-                    to: bookingToDelete.email,
-                    subject: `Reservation Canceled - Maricarl Resort`,
-                    html: generateHTML('Reservation Canceled', cancelContent)
-                });
-            } catch(e) { console.log("Email error:", e.message); }
+            transporter.sendMail({
+                from: `"Maricarl Resort" <${EMAIL_USER}>`,
+                to: bookingToDelete.email,
+                subject: `Reservation Canceled - Maricarl Resort`,
+                html: generateHTML('Reservation Canceled', cancelContent)
+            }).catch(e => console.log("Email error:", e.message));
         }
 
         if (source === 'customer') {
@@ -478,35 +469,28 @@ app.delete('/api/bookings/:id', async (req, res) => {
                 </table>
                 <p>This booking has been permanently removed from your dashboard and calendar.</p>
             `;
-            try {
-                await transporter.sendMail({
-                    from: `"Maricarl Resort System" <${MY_GMAIL}>`,
-                    to: ADMIN_EMAIL,
-                    subject: `⚠️ Guest Cancellation: ${bookingToDelete.guestName}`,
-                    html: generateHTML('Guest Cancellation Alert', adminAlertContent)
-                });
-            } catch(e) { console.log("Email error:", e.message); }
+            transporter.sendMail({
+                from: `"Maricarl Resort System" <${EMAIL_USER}>`,
+                to: ADMIN_EMAIL,
+                subject: `⚠️ Guest Cancellation: ${bookingToDelete.guestName}`,
+                html: generateHTML('Guest Cancellation Alert', adminAlertContent)
+            }).catch(e => console.log("Email error:", e.message));
             
             const receiptContent = `
                 <p>Dear <strong>${bookingToDelete.guestName}</strong>,</p>
                 <p>This email is to confirm that your reservation for <strong>${stayDates}</strong> has been <span style="color: #E11D48; font-weight: bold;">successfully canceled</span> as requested.</p>
                 <p>We hope to welcome you to Maricarl Resort in the future. If this was a mistake, please visit our website to make a new reservation.</p>
             `;
-            try {
-                await transporter.sendMail({
-                    from: `"Maricarl Resort" <${MY_GMAIL}>`,
-                    to: bookingToDelete.email,
-                    subject: `Cancellation Confirmed - Maricarl Resort`,
-                    html: generateHTML('Cancellation Processed', receiptContent)
-                });
-            } catch(e) { console.log("Email error:", e.message); }
+            transporter.sendMail({
+                from: `"Maricarl Resort" <${EMAIL_USER}>`,
+                to: bookingToDelete.email,
+                subject: `Cancellation Confirmed - Maricarl Resort`,
+                html: generateHTML('Cancellation Processed', receiptContent)
+            }).catch(e => console.log("Email error:", e.message));
         }
-
-        await Booking.findByIdAndDelete(bookingId);
-        res.status(200).json({ message: 'Reservation successfully deleted and emails sent.' });
     } catch (error) { 
         console.error(error);
-        res.status(500).json({ error: 'Failed to delete' }); 
+        if (!res.headersSent) res.status(500).json({ error: 'Failed to delete' }); 
     }
 });
 

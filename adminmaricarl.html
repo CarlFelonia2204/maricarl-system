@@ -504,7 +504,7 @@
         async function deletePromo(id) {
             if(!confirm("Are you sure you want to completely remove this promo code?")) return;
             try {
-                await fetch(`https://maricarl-backend.onrender.com/api/promos{id}`, { method: 'DELETE' });
+                await fetch(`https://maricarl-backend.onrender.com/api/promos/${id}`, { method: 'DELETE' });
                 showToast("Promo deleted successfully.");
                 loadPromos(); 
             } catch (e) { alert("Failed to delete promo."); }

@@ -207,7 +207,7 @@
                         </div>
                     </div>
 
-                    <!-- CUSTOM ELEGANT TIME DROPDOWNS (Replaces Clunky Native Selectors) -->
+                    <!-- CUSTOM ELEGANT TIME DROPDOWNS -->
                     <div class="flex gap-5 w-full">
                         
                         <!-- Custom Check-in Time -->
@@ -221,7 +221,6 @@
                             
                             <!-- The Dropdown Glass Menu -->
                             <div id="checkInDropdown" class="absolute left-0 top-[105%] w-full bg-white/95 backdrop-blur-xl border border-gray-100 rounded-2xl shadow-dropdown z-50 opacity-0 invisible transition-all duration-300 translate-y-2 max-h-60 overflow-y-auto custom-scrollbar">
-                                <!-- Options populated by JavaScript -->
                             </div>
                         </div>
 
@@ -236,7 +235,6 @@
                             
                             <!-- The Dropdown Glass Menu -->
                             <div id="checkOutDropdown" class="absolute left-0 top-[105%] w-full bg-white/95 backdrop-blur-xl border border-gray-100 rounded-2xl shadow-dropdown z-50 opacity-0 invisible transition-all duration-300 translate-y-2 max-h-60 overflow-y-auto custom-scrollbar">
-                                <!-- Options populated by JavaScript -->
                             </div>
                         </div>
 
@@ -323,7 +321,7 @@
         function populateTimeDropdowns() {
             let html = '';
             for (let i = 0; i < 24; i++) {
-                for (let j = 0; j < 60; j += 30) { // 30-minute intervals
+                for (let j = 0; j < 60; j += 30) { 
                     let hour = i;
                     let ampm = hour >= 12 ? 'PM' : 'AM';
                     let displayHour = hour % 12 || 12;
@@ -349,7 +347,6 @@
             const icon = document.getElementById(`${type}Icon`);
             const isClosed = dropdown.classList.contains('opacity-0');
 
-            // Close the other one if open
             if (activeDropdown && activeDropdown !== type) {
                 document.getElementById(`${activeDropdown}Dropdown`).classList.replace('opacity-100', 'opacity-0');
                 document.getElementById(`${activeDropdown}Dropdown`).classList.replace('visible', 'invisible');
@@ -376,7 +373,7 @@
         }
 
         function selectTime(event, displayVal, hiddenVal) {
-            event.stopPropagation(); // Stop click from propagating up and toggling the menu again
+            event.stopPropagation();
             if (!activeDropdown) return;
 
             document.getElementById(`${activeDropdown}TimeDisplay`).value = displayVal;
@@ -393,7 +390,6 @@
             activeDropdown = null;
         }
 
-        // Close dropdown when clicking outside
         document.addEventListener('click', (e) => {
             if (activeDropdown && !e.target.closest(`#${activeDropdown}Wrapper`)) {
                 document.getElementById(`${activeDropdown}Dropdown`).classList.replace('opacity-100', 'opacity-0');
@@ -405,7 +401,6 @@
             }
         });
 
-        // Initialize custom dropdowns
         populateTimeDropdowns();
 
 
@@ -512,7 +507,7 @@
             btn.innerHTML = '...'; btn.disabled = true;
 
             try {
-                const res = await fetch(`https://maricarl-backend.onrender.com/api/promos/verify/$){codeInput}`);
+                const res = await fetch(`https://maricarl-backend.onrender.com/api/promos/verify/${codeInput}`);
                 if (res.ok) {
                     const validPromo = await res.json();
                     state.discountApplied = validPromo.discount;
@@ -594,7 +589,7 @@
             }
 
             try {
-                const res = await fetch(`https://maricarl-backend.onrender.com/api/bookings/search?email=$){encodeURIComponent(email)}`);
+                const res = await fetch(`https://maricarl-backend.onrender.com/api/bookings/search?email=${encodeURIComponent(email)}`);
                 const rawData = await res.text();
                 
                 if (isAuto && rawData === lastSearchData) return;
@@ -636,7 +631,7 @@
         async function cancelMyBooking(id) {
             if(!confirm("Are you sure you want to permanently cancel this reservation?")) return;
             try {
-                await fetch(`https://maricarl-backend.onrender.com/api/bookings/$){id}?source=customer`, { method: 'DELETE' });
+                await fetch(`https://maricarl-backend.onrender.com/api/bookings/${id}?source=customer`, { method: 'DELETE' });
                 showToast("Cancelled", "Reservation removed successfully.");
                 findMyBookings(); 
                 fetchUnavailableDates(); 
