@@ -1,4 +1,4 @@
-// 1. FORCE IPv4 FIRST (Must be at the absolute top)
+// FORCING IPV4 NATIONWIDE AT THE START OF THE APP
 const dns = require('dns');
 dns.setDefaultResultOrder('ipv4first');
 
