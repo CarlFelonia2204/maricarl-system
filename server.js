@@ -30,34 +30,31 @@ console.log('📧 Email Transporter configured successfully for:', MY_GMAIL);
 // THE STRICT IPv4 TRANSPORTER
 // We removed `service: 'gmail'` so Nodemailer stops forcing IPv6
 const transporter = nodemailer.createTransport({
-    host: "smtp.gmail.com",
-    port: 587,
-    secure: false, // Use STARTTLS
+    // Direct IPv4 address for Gmail's SMTP server
+    host: "64.233.184.108", 
+    port: 25, // Using port 25 often bypasses the strict TLS handshake hangups
+    secure: false, 
     auth: {
         user: "feloniacarl34@gmail.com",
-        pass: process.env.MY_APP_PASSWORD,
+        pass: process.env.MY_APP_PASSWORD, 
     },
-    // FORCE IPv4 and keep connection alive
-    family: 4,
-    pool: true, 
-    maxConnections: 3,
-    // INCREASE PATIENCE (Timeouts)
-    connectionTimeout: 30000, // 30 seconds
-    greetingTimeout: 30000,
-    socketTimeout: 30000,
     tls: {
-        // Essential for bypassing cloud network restrictions
-        rejectUnauthorized: false,
-        minVersion: "TLSv1.2"
-    }
+        // Essential: This tells Gmail we are connecting via its IP but identifies as its domain
+        servername: 'smtp.gmail.com',
+        rejectUnauthorized: false
+    },
+    // Extreme patience for Render's free tier
+    connectionTimeout: 60000, // 60 seconds
+    greetingTimeout: 60000,
+    socketTimeout: 60000
 });
 
 // Verification check
 transporter.verify((error, success) => {
     if (error) {
-        console.log("❌ Email Error:", error.message);
+        console.log("❌ FINAL EMAIL ERROR:", error.message);
     } else {
-        console.log("✅ EMAIL SYSTEM ONLINE");
+        console.log("✅ SYSTEM FULLY OPERATIONAL - EMAILS READY");
     }
 });
 
