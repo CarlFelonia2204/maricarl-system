@@ -1,6 +1,6 @@
+// 1. FORCE IPv4 FIRST (Must be at the absolute top)
 const dns = require('dns');
-dns.setServers(['8.8.8.8', '8.8.4.4']);
-dns.setDefaultResultOrder('ipv4first'); // Forces IPv4 to bypass the ENETUNREACH error
+dns.setDefaultResultOrder('ipv4first');
 
 require('dotenv').config(); 
 const express = require('express');
@@ -19,27 +19,27 @@ app.use(cors());
 // 1. GLOBAL EMAIL & SERVER CONFIGURATION
 // ==========================================
 
-// WE ARE HARDCODING THE EMAIL TO BYPASS THE .ENV TYPO OVERRIDE
 const MY_GMAIL = 'feloniacarl34@gmail.com'; 
 const ADMIN_EMAIL = 'feloniacarl34@gmail.com'; 
 
-// We still use the environment variable for the password for security
+// We pull the 16-character app password from Render's Environment
 const MY_APP_PASS = process.env.MY_APP_PASS || process.env.EMAIL_PASS;
 
 console.log('📧 Email Transporter configured successfully for:', MY_GMAIL);
 
-// THE "ULTIMATE CLOUD" TRANSPORTER (HARDCODED IPv4)
+// THE STRICT IPv4 TRANSPORTER
+// We removed `service: 'gmail'` so Nodemailer stops forcing IPv6
 const transporter = nodemailer.createTransport({
-  host: '74.125.202.108', // Explicit Google IPv4 Address
+  host: 'smtp.gmail.com',
   port: 465,
-  secure: true,
+  secure: true, // true for 465, false for other ports
   auth: {
     user: MY_GMAIL,
     pass: MY_APP_PASS
   },
   tls: {
-    rejectUnauthorized: false,
-    servername: 'smtp.gmail.com' // REQUIRED when using a direct IP address
+    // Stops certificate check timeouts
+    rejectUnauthorized: false
   }
 });
 
