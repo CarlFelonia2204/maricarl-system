@@ -17,15 +17,24 @@ app.use(cors());
 // ==========================================
 // 1. GLOBAL EMAIL & SERVER CONFIGURATION
 // ==========================================
-const EMAIL_USER = process.env.EMAIL_USER; 
+// This ensures it works whether you used MY_GMAIL or EMAIL_USER in Render
+const MY_GMAIL = process.env.MY_GMAIL || process.env.EMAIL_USER; 
+const MY_APP_PASS = process.env.MY_APP_PASS || process.env.EMAIL_PASS;
 const ADMIN_EMAIL = 'feloniacarl34@gmail.com'; 
+
+// STARTUP CHECK: This will tell us in the Render Logs if your keys are missing!
+if (!MY_GMAIL || !MY_APP_PASS) {
+    console.log('⚠️ WARNING: Email credentials are MISSING in Render Environment Variables!');
+} else {
+    console.log('📧 Email Transporter configured successfully for:', MY_GMAIL);
+}
 
 // THE "ULTIMATE CLOUD" TRANSPORTER
 const transporter = nodemailer.createTransport({
   service: 'gmail', // Let Nodemailer handle Google's cloud settings directly
   auth: {
-    user: EMAIL_USER,
-    pass: process.env.EMAIL_PASS
+    user: MY_GMAIL,
+    pass: MY_APP_PASS
   },
   tls: {
     rejectUnauthorized: false
@@ -135,11 +144,11 @@ setInterval(async () => {
                         <p>Warm regards,<br><strong>The Maricarl Resort Team</strong></p>
                     `;
                     transporter.sendMail({
-                        from: `"Maricarl Resort" <${EMAIL_USER}>`,
+                        from: `"Maricarl Resort" <${MY_GMAIL}>`,
                         to: b.email,
                         subject: `Thank You for Staying at Maricarl Resort!`,
                         html: generateHTML('We Hope You Enjoyed Your Stay', thankYouContent)
-                    }).catch(e => console.log(e.message));
+                    }).catch(e => console.log("Background email error (Thank You):", e.message));
                     
                     b.thankYouSent = true;
                     await b.save();
@@ -152,11 +161,11 @@ setInterval(async () => {
                         <p>Thank you!</p>
                     `;
                     transporter.sendMail({
-                        from: `"Maricarl Resort" <${EMAIL_USER}>`,
+                        from: `"Maricarl Resort" <${MY_GMAIL}>`,
                         to: b.email,
                         subject: `Payment Reminder - Maricarl Resort`,
                         html: generateHTML('Pending Balance Reminder', reminderContent)
-                    }).catch(e => console.log(e.message));
+                    }).catch(e => console.log("Background email error (Reminder):", e.message));
                     
                     b.reminderSent = true;
                     await b.save();
@@ -213,11 +222,11 @@ app.patch('/api/bookings/:id/pay', async (req, res) => {
         `;
 
         transporter.sendMail({
-            from: `"Maricarl Resort" <${EMAIL_USER}>`,
+            from: `"Maricarl Resort" <${MY_GMAIL}>`,
             to: booking.email,
             subject: `Payment Confirmed - Maricarl Resort`,
             html: generateHTML('Payment Received', receiptContent)
-        }).catch(e => console.log(e.message));
+        }).catch(e => console.log("Background email error (Receipt):", e.message));
 
         const checkOutDateStr = booking.stayType === 'day' ? booking.checkIn : booking.checkOut;
         const timeStr = booking.checkOutTime || '12:00'; 
@@ -240,11 +249,11 @@ app.patch('/api/bookings/:id/pay', async (req, res) => {
                 `;
                 
                 transporter.sendMail({
-                    from: `"Maricarl Resort" <${EMAIL_USER}>`,
+                    from: `"Maricarl Resort" <${MY_GMAIL}>`,
                     to: booking.email,
                     subject: `Thank You for Staying at Maricarl Resort!`,
                     html: generateHTML('We Hope You Enjoyed Your Stay', thankYouContent)
-                }).catch(e => console.log(e.message));
+                }).catch(e => console.log("Background email error (Thank You Delayed):", e.message));
                 
                 booking.thankYouSent = true;
                 await booking.save();
@@ -310,11 +319,11 @@ app.post('/api/bookings', async (req, res) => {
         `;
 
         transporter.sendMail({
-            from: `"Maricarl Resort" <${EMAIL_USER}>`, 
+            from: `"Maricarl Resort" <${MY_GMAIL}>`, 
             to: ADMIN_EMAIL, 
             subject: `New Reservation Request: ${newBooking.guestName}`,
             html: generateHTML('Action Required: New Booking', adminContent)
-        }).catch(e => console.log("Background email error:", e.message));
+        }).catch(e => console.log("Background email error (New Booking):", e.message));
 
     } catch (error) { 
         console.error("Critical Error:", error);
@@ -413,11 +422,11 @@ app.patch('/api/bookings/:id/status', async (req, res) => {
             `;
 
             transporter.sendMail({
-                from: `"Maricarl Resort" <${EMAIL_USER}>`, 
+                from: `"Maricarl Resort" <${MY_GMAIL}>`, 
                 to: updated.email,
                 subject: `Reservation Confirmed - Maricarl Resort`,
                 html: generateHTML('Your Booking is Confirmed', customerContent)
-            }).catch(e => console.log("Email error:", e.message));
+            }).catch(e => console.log("Background email error (Approval):", e.message));
         }
     } catch (error) { 
         if (!res.headersSent) res.status(500).json({ error: 'Failed' }); 
@@ -449,11 +458,11 @@ app.delete('/api/bookings/:id', async (req, res) => {
                 <p>Thank you for considering Maricarl Resort.</p>
             `;
             transporter.sendMail({
-                from: `"Maricarl Resort" <${EMAIL_USER}>`,
+                from: `"Maricarl Resort" <${MY_GMAIL}>`,
                 to: bookingToDelete.email,
                 subject: `Reservation Canceled - Maricarl Resort`,
                 html: generateHTML('Reservation Canceled', cancelContent)
-            }).catch(e => console.log("Email error:", e.message));
+            }).catch(e => console.log("Background email error (Admin Cancel):", e.message));
         }
 
         if (source === 'customer') {
@@ -470,11 +479,11 @@ app.delete('/api/bookings/:id', async (req, res) => {
                 <p>This booking has been permanently removed from your dashboard and calendar.</p>
             `;
             transporter.sendMail({
-                from: `"Maricarl Resort System" <${EMAIL_USER}>`,
+                from: `"Maricarl Resort System" <${MY_GMAIL}>`,
                 to: ADMIN_EMAIL,
                 subject: `⚠️ Guest Cancellation: ${bookingToDelete.guestName}`,
                 html: generateHTML('Guest Cancellation Alert', adminAlertContent)
-            }).catch(e => console.log("Email error:", e.message));
+            }).catch(e => console.log("Background email error (Customer Cancel Admin Alert):", e.message));
             
             const receiptContent = `
                 <p>Dear <strong>${bookingToDelete.guestName}</strong>,</p>
@@ -482,11 +491,11 @@ app.delete('/api/bookings/:id', async (req, res) => {
                 <p>We hope to welcome you to Maricarl Resort in the future. If this was a mistake, please visit our website to make a new reservation.</p>
             `;
             transporter.sendMail({
-                from: `"Maricarl Resort" <${EMAIL_USER}>`,
+                from: `"Maricarl Resort" <${MY_GMAIL}>`,
                 to: bookingToDelete.email,
                 subject: `Cancellation Confirmed - Maricarl Resort`,
                 html: generateHTML('Cancellation Processed', receiptContent)
-            }).catch(e => console.log("Email error:", e.message));
+            }).catch(e => console.log("Background email error (Customer Cancel Receipt):", e.message));
         }
     } catch (error) { 
         console.error(error);
