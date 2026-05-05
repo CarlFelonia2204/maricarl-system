@@ -207,7 +207,7 @@
         // ================= DATABASE LOGIC =================
         async function loadBookings(isAuto = false) {
             try {
-                const response = await fetch('http://localhost:3000/api/bookings');
+                const response = await fetch('https://maricarl-backend.onrender.com/api/bookings');
                 const rawData = await response.text();
                 
                 const currentMinute = new Date().getMinutes();
@@ -333,7 +333,7 @@
         async function updateBookingStatus(btn, id, newStatus) {
             btn.innerHTML = '...'; btn.disabled = true;
             try {
-                await fetch(`http://localhost:3000/api/bookings/${id}/status`, { 
+                await fetch(`https://maricarl-backend.onrender.com/api/bookings/$){id}/status`, { 
                     method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: newStatus })
                 });
                 showToast(`Approved! Email sent & Calendar updated.`); 
@@ -344,7 +344,7 @@
         async function markAsPaid(btn, id) {
             btn.innerHTML = '...'; btn.disabled = true;
             try {
-                const res = await fetch(`http://localhost:3000/api/bookings/${id}/pay`, { method: 'PATCH' });
+                const res = await fetch(`https://maricarl-backend.onrender.com/api/bookings/$){id}/pay`, { method: 'PATCH' });
                 if(res.ok) {
                     showToast("Payment marked as Paid & receipt sent!"); 
                     await loadBookings(); 
@@ -356,7 +356,7 @@
             if(!confirm("Are you sure you want to completely remove this booking?")) return;
             btn.innerHTML = '...'; btn.disabled = true;
             try {
-                const res = await fetch(`http://localhost:3000/api/bookings/${id}?source=admin`, { method: 'DELETE' });
+                const res = await fetch(`https://maricarl-backend.onrender.com/api/bookings/$){id}?source=admin`, { method: 'DELETE' });
                 if(res.ok) {
                     showToast(`Reservation successfully deleted.`); 
                     await loadBookings(); 
@@ -448,7 +448,7 @@
         async function loadPromos() {
             const list = document.getElementById('promoList');
             try {
-                const response = await fetch('http://localhost:3000/api/promos');
+                const response = await fetch('https://maricarl-backend.onrender.com/api/promos');
                 const promos = await response.json();
                 list.innerHTML = '';
                 
@@ -487,7 +487,7 @@
             if(!code || !discount) return alert('Fill code and discount');
 
             try {
-                await fetch('http://localhost:3000/api/promos', {
+                await fetch('https://maricarl-backend.onrender.com/api/promos', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ code, discount: Number(discount), description: desc, expiryDate: expiry })
                 });
@@ -504,7 +504,7 @@
         async function deletePromo(id) {
             if(!confirm("Are you sure you want to completely remove this promo code?")) return;
             try {
-                await fetch(`http://localhost:3000/api/promos/${id}`, { method: 'DELETE' });
+                await fetch(`https://maricarl-backend.onrender.com/api/promos{id}`, { method: 'DELETE' });
                 showToast("Promo deleted successfully.");
                 loadPromos(); 
             } catch (e) { alert("Failed to delete promo."); }
