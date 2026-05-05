@@ -30,17 +30,18 @@ if (!MY_GMAIL || !MY_APP_PASS) {
     console.log('📧 Email Transporter configured successfully for:', MY_GMAIL);
 }
 
-// EXPLICIT IPv4 TRANSPORTER
+// THE "ULTIMATE CLOUD" TRANSPORTER (HARDCODED IPv4)
 const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
+  host: '74.125.202.108', // Explicit Google IPv4 Address (Bypasses the 2404: IPv6 error)
   port: 465,
-  secure: true, // Use SSL (Port 465) instead of TLS to avoid STARTTLS timeouts
+  secure: true,
   auth: {
     user: MY_GMAIL,
     pass: MY_APP_PASS
   },
   tls: {
-    rejectUnauthorized: false
+    rejectUnauthorized: false,
+    servername: 'smtp.gmail.com' // REQUIRED when using a direct IP address
   }
 });
 
