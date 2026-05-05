@@ -1,5 +1,6 @@
 const dns = require('dns');
 dns.setServers(['8.8.8.8', '8.8.4.4']); // Bypasses your ISP's DNS block
+dns.setDefaultResultOrder('ipv4first'); // THIS IS THE FIX: Forces IPv4 to bypass Render network timeouts
 
 require('dotenv').config(); 
 const express = require('express');
@@ -29,9 +30,11 @@ if (!MY_GMAIL || !MY_APP_PASS) {
     console.log('📧 Email Transporter configured successfully for:', MY_GMAIL);
 }
 
-// THE "ULTIMATE CLOUD" TRANSPORTER
+// EXPLICIT IPv4 TRANSPORTER
 const transporter = nodemailer.createTransport({
-  service: 'gmail', // Let Nodemailer handle Google's cloud settings directly
+  host: 'smtp.gmail.com',
+  port: 465,
+  secure: true, // Use SSL (Port 465) instead of TLS to avoid STARTTLS timeouts
   auth: {
     user: MY_GMAIL,
     pass: MY_APP_PASS
