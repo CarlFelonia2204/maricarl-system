@@ -79,12 +79,14 @@
         </div>
     </div>
 
-    <!-- Manage Booking Button -->
-    <div class="absolute top-0 right-0 p-6 lg:p-8 z-50 w-full flex justify-end pointer-events-none">
-        <button onclick="toggleManageModal(true)" class="pointer-events-auto px-8 py-4 bg-white border border-gray-200 text-black hover:bg-gray-50 hover:text-luxury-dark rounded-full text-xs font-bold tracking-widest shadow-soft hover:shadow-md transition-all duration-300 active:scale-95 uppercase">
-            Manage Reservation
-        </button>
-    </div>
+    <!-- Updated Manage Booking Button -->
+<div class="absolute top-0 right-0 p-4 lg:p-8 z-50 w-full flex justify-end pointer-events-none">
+    <button onclick="toggleManageModal(true)" 
+        class="pointer-events-auto px-4 py-2.5 lg:px-8 lg:py-4 bg-white/90 backdrop-blur-md border border-gray-200 text-black hover:bg-gray-50 rounded-full text-[10px] lg:text-xs font-bold tracking-widest shadow-soft transition-all active:scale-95 uppercase">
+        <span class="hidden lg:inline">Manage Reservation</span>
+        <span class="lg:hidden">My Bookings</span>
+    </button>
+</div>
 
     <!-- Manage Booking Modal -->
     <div id="manageModal" class="modal-overlay fixed inset-0 bg-luxury-dark/90 backdrop-blur-md z-50 flex items-center justify-center p-4">
