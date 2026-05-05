@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Maricarl | Admin OS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: { luxury: { dark: '#0F172A', gold: '#C5A059', sand: '#F8FAFC', border: '#E2E8F0' } },
+                    fontFamily: { serif: ['"Cinzel"', 'serif'], sans: ['"Outfit"', 'sans-serif'] },
+                    boxShadow: { 'soft': '0 4px 20px -2px rgba(15, 23, 42, 0.05)', 'float': '0 12px 30px -10px rgba(15, 23, 42, 0.1)' }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background-color: #F8FAFC; font-family: 'Outfit', sans-serif; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .app-view { display: none; } .app-view.active { display: block; animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        .floating-row { transition: all 0.3s ease; border: 1px solid transparent; }
+        .floating-row:hover { transform: translateY(-3px); box-shadow: 0 12px 30px -10px rgba(15, 23, 42, 0.1); border-color: #E2E8F0; background: #FFFFFF; }
+        .promo-panel { transition: max-height 0.5s ease, opacity 0.4s ease; max-height: 0; opacity: 0; overflow: hidden; }
+        .promo-panel.show { max-height: 400px; opacity: 1; margin-bottom: 1.5rem; }
+        @media (max-width: 768px) {
+            .responsive-row { flex-direction: column; align-items: flex-start !important; gap: 1rem; padding: 1.5rem !important; }
+            .responsive-col { width: 100% !important; display: flex; justify-content: space-between; align-items: center; }
+            .responsive-label { display: block; font-size: 0.65rem; text-transform: uppercase; color: #94A3B8; font-weight: 700; }
+            .desktop-header { display: none !important; }
+            .floating-row { background: white; border-radius: 1.5rem; margin-bottom: 1rem; border: 1px solid #E2E8F0; }
+        }
+        @media (min-width: 769px) { .responsive-label { display: none; } .floating-row { border-radius: 1rem; margin-bottom: 0.5rem; background: #FFFFFF; border: 1px solid #F1F5F9; } }
+    </style>
+</head>
+<body class="h-screen flex overflow-hidden text-luxury-dark">
+
+    <div id="toast" class="fixed top-6 left-1/2 -translate-x-1/2 z-50 hidden transition-opacity duration-300 opacity-0">
+        <div class="bg-luxury-dark text-white rounded-2xl px-6 py-4 flex items-center gap-4 shadow-float border border-white/10">
+            <p id="toastMessage" class="text-sm font-bold tracking-wide">Success.</p>
+        </div>
+    </div>
+
+    <!-- SIDEBAR -->
+    <aside class="w-72 bg-luxury-dark text-white hidden md:flex flex-col z-20 shadow-2xl">
+        <div class="p-8 pb-4">
+            <div class="w-8 h-1 bg-luxury-gold mb-4 rounded-full opacity-80"></div>
+            <h1 class="text-3xl font-serif tracking-widest leading-none mb-1">Maricarl.</h1>
+            <p class="text-xs text-slate-400 uppercase tracking-widest mt-1">Admin Portal</p>
+        </div>
+        <nav class="flex-1 px-4 py-6 space-y-2">
+            <button onclick="switchView('dashboard')" class="nav-item active w-full flex items-center gap-4 px-5 py-3.5 rounded-2xl transition-all border border-transparent bg-white/10">Live Dashboard</button>
+            <button onclick="switchView('history')" class="nav-item w-full flex items-center gap-4 px-5 py-3.5 rounded-2xl transition-all border border-transparent hover:bg-white/5">History</button>
+            <button onclick="switchView('calendar')" class="nav-item w-full flex items-center gap-4 px-5 py-3.5 rounded-2xl transition-all border border-transparent hover:bg-white/5">Calendar</button>
+            <button onclick="switchView('promo')" class="nav-item w-full flex items-center gap-4 px-5 py-3.5 rounded-2xl transition-all border border-transparent hover:bg-white/5">Promos</button>
+        </nav>
+    </aside>
+
+    <main class="flex-1 flex flex-col h-full relative overflow-hidden bg-luxury-sand w-full">
+        <div class="flex-1 overflow-y-auto p-4 md:p-10 pb-28 md:pb-10 no-scrollbar">
+
+            <!-- DASHBOARD VIEW -->
+            <div id="view-dashboard" class="app-view active">
+                <h2 class="text-2xl md:text-3xl font-serif font-bold mb-8">Live Dashboard</h2>
+                <div class="desktop-header flex px-8 py-3 mb-2">
+                    <div class="w-1/4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Guest Info</div>
+                    <div class="w-1/4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Dates & Times</div>
+                    <div class="w-1/5 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Details</div>
+                    <div class="w-1/6 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total & Payment</div>
+                    <div class="flex-1 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right">Action</div>
+                </div>
+                <div id="reservationsList" class="flex flex-col gap-3"></div>
+            </div>
+
+            <!-- HISTORY VIEW -->
+            <div id="view-history" class="app-view">
+                <h2 class="text-2xl md:text-3xl font-serif font-bold mb-8">Past Bookings</h2>
+                <div class="desktop-header flex px-8 py-3 mb-2 opacity-70">
+                    <div class="w-1/4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Guest Info</div>
+                    <div class="w-1/4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Dates & Times</div>
+                    <div class="w-1/5 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Details</div>
+                    <div class="w-1/6 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total & Payment</div>
+                    <div class="flex-1 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right">Status</div>
+                </div>
+                <div id="historyList" class="flex flex-col gap-3 opacity-90"></div>
+            </div>
+
+            <!-- CALENDAR VIEW -->
+            <div id="view-calendar" class="app-view">
+                <div class="flex justify-between items-end mb-8">
+                    <h2 class="text-2xl md:text-3xl font-serif font-bold">Dynamic Calendar</h2>
+                    <div class="flex items-center gap-3 bg-white px-3 py-1.5 rounded-xl shadow-sm border border-slate-200">
+                        <button onclick="changeMonth(-1)" class="text-slate-400 hover:text-luxury-gold transition-colors p-1"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg></button>
+                        <p class="text-slate-700 font-bold min-w-[120px] text-center" id="calendarMonthLabel"></p>
+                        <button onclick="changeMonth(1)" class="text-slate-400 hover:text-luxury-gold transition-colors p-1"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg></button>
+                    </div>
+                </div>
+                <div class="bg-white rounded-[2rem] shadow-soft border border-luxury-border p-6">
+                    <div class="grid grid-cols-7 mb-4 text-center text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                        <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
+                    </div>
+                    <div id="calendarGrid" class="grid grid-cols-7 gap-2 md:gap-3"></div>
+                </div>
+            </div>
+
+            <!-- PROMOS VIEW -->
+            <div id="view-promo" class="app-view">
+                <div class="flex justify-between items-end mb-8">
+                    <h2 class="text-2xl md:text-3xl font-serif font-bold">Promo Codes</h2>
+                    <button onclick="togglePromoForm()" class="px-5 py-2.5 bg-luxury-dark text-white rounded-xl text-sm font-semibold shadow-md hover:bg-black transition-colors">Create New Code</button>
+                </div>
+                
+                <div id="promoFormPanel" class="promo-panel bg-white p-6 rounded-3xl shadow-soft border border-luxury-border flex flex-col gap-4">
+                    <div class="flex gap-4">
+                        <div class="flex-1">
+                            <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Code Name</label>
+                            <input type="text" id="newCodeName" placeholder="e.g. SUMMER26" class="w-full uppercase p-3 border border-slate-200 rounded-xl outline-none focus:border-luxury-gold text-sm font-bold">
+                        </div>
+                        <div class="flex-1">
+                            <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Discount Amount (₱)</label>
+                            <input type="number" id="newCodeDiscount" placeholder="2000" class="w-full p-3 border border-slate-200 rounded-xl outline-none focus:border-luxury-gold text-sm font-bold">
+                        </div>
+                        <div class="flex-1">
+                            <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Expiry Date</label>
+                            <input type="date" id="newCodeExpiry" class="w-full p-3 border border-slate-200 rounded-xl outline-none focus:border-luxury-gold text-sm font-bold text-slate-500">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Description</label>
+                        <input type="text" id="newCodeDesc" placeholder="e.g. Special offer for returning guests." class="w-full p-3 border border-slate-200 rounded-xl outline-none focus:border-luxury-gold text-sm">
+                    </div>
+                    <div class="flex justify-end mt-2">
+                        <button onclick="savePromo()" class="px-8 py-3 bg-emerald-500 text-white font-bold rounded-xl hover:bg-emerald-600 transition-colors">Publish Promo</button>
+                    </div>
+                </div>
+
+                <div id="promoList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+            </div>
+        </div>
+    </main>
+
+    <nav class="md:hidden bg-white/90 backdrop-blur-md fixed bottom-0 w-full px-4 py-4 pb-6 flex justify-between items-center z-50 border-t border-slate-200">
+        <button onclick="switchView('dashboard')" class="mobile-nav-item active text-[10px] font-bold tracking-wider uppercase">Live</button>
+        <button onclick="switchView('history')" class="mobile-nav-item text-[10px] font-bold tracking-wider uppercase">History</button>
+        <button onclick="switchView('calendar')" class="mobile-nav-item text-[10px] font-bold tracking-wider uppercase">Dates</button>
+        <button onclick="switchView('promo')" class="mobile-nav-item text-[10px] font-bold tracking-wider uppercase">Promos</button>
+    </nav>
+
+    <script>
+        let liveBookings = []; 
+        let calMonth = new Date().getMonth();
+        let calYear = new Date().getFullYear();
+        
+        let lastAdminData = "";
+        let lastMinute = new Date().getMinutes(); // Tracks time for auto-refresh
+
+        window.onload = () => { 
+            loadBookings(); 
+            loadPromos(); 
+            setInterval(() => loadBookings(true), 3000); 
+        };
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastMessage').textContent = msg;
+            toast.classList.remove('hidden'); toast.classList.add('opacity-100');
+            setTimeout(() => { toast.classList.remove('opacity-100'); setTimeout(() => toast.classList.add('hidden'), 300); }, 3000);
+        }
+
+        function switchView(viewName) {
+            document.querySelectorAll('.app-view').forEach(view => view.classList.remove('active'));
+            document.querySelectorAll('.nav-item, .mobile-nav-item').forEach(nav => nav.classList.remove('active'));
+            document.getElementById(`view-${viewName}`).classList.add('active');
+            
+            const navIndex = viewName === 'dashboard' ? 0 : viewName === 'history' ? 1 : viewName === 'calendar' ? 2 : 3;
+            document.querySelectorAll('.nav-item')[navIndex].classList.add('active');
+            document.querySelectorAll('.mobile-nav-item')[navIndex].classList.add('active');
+            
+            document.querySelector('.overflow-y-auto').scrollTop = 0;
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return '';
+            const [y, m, d] = dateStr.split('-');
+            return new Date(y, m - 1, d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+        }
+        function formatTime(timeStr) {
+            if (!timeStr) return '';
+            let [hours, minutes] = timeStr.split(':');
+            hours = parseInt(hours);
+            const ampm = hours >= 12 ? 'PM' : 'AM';
+            hours = hours % 12 || 12;
+            return `${hours}:${minutes} ${ampm}`;
+        }
+
+        function isDatePast(dateString, timeString) {
+            if (!dateString) return false;
+            const [year, month, day] = dateString.split('-');
+            const [hours, minutes] = (timeString || '12:00').split(':');
+            const checkDate = new Date(year, month - 1, day, hours, minutes);
+            return checkDate <= new Date(); // Using <= ensures exact time triggers completion
+        }
+
+        // ================= DATABASE LOGIC =================
+        async function loadBookings(isAuto = false) {
+            try {
+                const response = await fetch('http://localhost:3000/api/bookings');
+                const rawData = await response.text();
+                
+                const currentMinute = new Date().getMinutes();
+                
+                // ONLY skip redraw if data is identical AND the minute hasn't changed.
+                // If minute changes, it forces a redraw to update the calendar & history dynamically.
+                if (isAuto && rawData === lastAdminData && currentMinute === lastMinute) return; 
+                
+                lastAdminData = rawData;
+                lastMinute = currentMinute;
+                
+                liveBookings = JSON.parse(rawData);
+                
+                const liveList = document.getElementById('reservationsList');
+                const pastList = document.getElementById('historyList');
+                
+                liveList.innerHTML = ''; 
+                pastList.innerHTML = '';
+                
+                let activeCount = 0;
+                let pastCount = 0;
+
+                liveBookings.forEach(booking => {
+                    const isConfirmed = booking.status === 'Confirmed';
+                    const bookTime = new Date(booking.createdAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' });
+                    
+                    let isFinished = false;
+                    if (isConfirmed) {
+                        const referenceDate = booking.stayType === 'day' ? booking.checkIn : booking.checkOut;
+                        isFinished = isDatePast(referenceDate, booking.checkOutTime);
+                    }
+
+                    let actionHtml = '';
+                    
+                    if (isFinished) {
+                        actionHtml = `
+                        <div class="flex items-center gap-3 w-full md:w-auto justify-end">
+                            <div class="px-5 py-2.5 rounded-[14px] text-xs font-bold bg-slate-100 text-slate-500 flex-1 text-center border border-slate-200">Completed</div>
+                            <button onclick="deleteBooking(this, '${booking._id}')" class="px-4 py-2.5 rounded-[14px] text-xs font-bold bg-rose-50 text-rose-600 hover:bg-rose-100 transition-colors border border-transparent">Delete</button>
+                        </div>`;
+                    } else if (isConfirmed) {
+                        actionHtml = `
+                        <div class="flex gap-3 w-full md:w-auto">
+                            <div class="px-5 py-2.5 rounded-[14px] text-xs font-bold bg-[#ECFDF5] text-[#059669] flex-1 text-center border border-[#A7F3D0]">Confirmed</div>
+                            <button onclick="deleteBooking(this, '${booking._id}')" class="px-5 py-2.5 rounded-[14px] text-xs font-bold bg-[#FFF1F2] text-[#E11D48] hover:bg-[#FFE4E6] transition-colors border border-transparent">Cancel</button>
+                        </div>`;
+                    } else {
+                        actionHtml = `
+                        <div class="flex gap-3 w-full md:w-auto">
+                            <button onclick="updateBookingStatus(this, '${booking._id}', 'Confirmed')" class="px-6 py-2.5 rounded-[14px] text-xs font-bold bg-[#111827] text-white hover:bg-black transition-colors flex-1 shadow-soft">Approve</button>
+                            <button onclick="deleteBooking(this, '${booking._id}')" class="px-6 py-2.5 rounded-[14px] text-xs font-bold bg-[#FFF1F2] text-[#E11D48] hover:bg-[#FFE4E6] transition-colors border border-transparent flex-1">Reject</button>
+                        </div>`;
+                    }
+
+                    const fCheckIn = formatDate(booking.checkIn);
+                    const fCheckOut = formatDate(booking.checkOut);
+                    const stayDates = booking.stayType === 'overnight' ? `${fCheckIn} - ${fCheckOut}` : fCheckIn;
+                    
+                    const fCheckInTime = formatTime(booking.checkInTime);
+                    const fCheckOutTime = formatTime(booking.checkOutTime);
+                    const stayTimes = (fCheckInTime && fCheckOutTime) ? `${fCheckInTime} to ${fCheckOutTime}` : 'Standard Time';
+
+                    const stayBadge = booking.stayType === 'day' ? `<span class="bg-blue-50 text-blue-700 px-2 py-1 rounded text-[10px] font-bold">Day Tour</span>` : `<span class="bg-slate-100 text-slate-700 px-2 py-1 rounded text-[10px] font-bold">Overnight</span>`;
+                    const payBadge = booking.paymentMode ? `<span class="bg-gray-100 text-gray-600 px-2 py-1 rounded text-[10px] font-bold mt-1 inline-block border border-gray-200">${booking.paymentMode}</span>` : '';
+                    
+                    let payStatusHtml = '';
+                    if (booking.paymentStatus === 'Paid') {
+                        payStatusHtml = `<span class="block mt-1 text-[9px] font-bold uppercase tracking-widest text-emerald-600">Paid</span>`;
+                    } else {
+                        payStatusHtml = `
+                            <span class="block mt-1 text-[9px] font-bold uppercase tracking-widest text-rose-500 mb-1">Pending Payment</span>
+                            <button onclick="markAsPaid(this, '${booking._id}')" class="bg-luxury-dark text-white px-2 py-1 rounded-md text-[8px] font-bold uppercase tracking-widest hover:bg-black transition-colors">Mark Paid</button>
+                        `;
+                    }
+
+                    const rowHtml = `
+                    <div class="floating-row flex items-center px-6 md:px-8 py-5 responsive-row relative bg-white shadow-sm hover:shadow-md ${isFinished ? 'grayscale opacity-80' : ''}">
+                        <div class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-12 ${isFinished ? 'bg-slate-300' : (isConfirmed ? 'bg-emerald-400' : 'bg-rose-400')} rounded-r-md hidden md:block"></div>
+                        <div class="responsive-col md:w-1/4">
+                            <span class="responsive-label">Guest Profile</span>
+                            <div>
+                                <p class="font-bold text-luxury-dark text-base tracking-tight">${booking.guestName}</p>
+                                <p class="text-[11px] text-slate-500 font-medium">${booking.email}</p>
+                                <p class="text-[11px] text-slate-500 font-medium">${booking.phone || 'No phone provided'}</p>
+                                <p class="text-[9px] text-slate-400 font-bold uppercase mt-1">Booked: ${bookTime}</p>
+                            </div>
+                        </div>
+                        <div class="responsive-col md:w-1/4">
+                            <span class="responsive-label">Dates & Times</span>
+                            <div>
+                                <p class="font-semibold text-luxury-dark text-sm">${stayDates}</p>
+                                <p class="text-[11px] text-slate-500 font-bold tracking-wide mt-0.5">${stayTimes}</p>
+                                ${(!isConfirmed && !isFinished) ? '<p class="text-xs text-rose-500 font-bold mt-1">Needs Review</p>' : ''}
+                            </div>
+                        </div>
+                        <div class="responsive-col md:w-1/5">
+                            <span class="responsive-label">Details</span>
+                            <div class="flex flex-col items-start gap-1">${stayBadge}<p class="text-xs font-bold">${booking.pax} Guests</p></div>
+                        </div>
+                        <div class="responsive-col md:w-1/6">
+                            <span class="responsive-label">Total & Payment</span>
+                            <div>
+                                <p class="font-bold text-base text-luxury-dark">₱${booking.totalCost.toLocaleString('en-PH')}</p>
+                                ${payBadge}
+                                ${payStatusHtml}
+                            </div>
+                        </div>
+                        <div class="responsive-col md:flex-1 flex justify-end">${actionHtml}</div>
+                    </div>`;
+
+                    if (isFinished) { pastList.insertAdjacentHTML('beforeend', rowHtml); pastCount++; } 
+                    else { liveList.insertAdjacentHTML('beforeend', rowHtml); activeCount++; }
+                });
+                
+                if (activeCount === 0) liveList.innerHTML = '<p class="text-center py-10 text-slate-400 font-bold">No active or pending reservations.</p>';
+                if (pastCount === 0) pastList.innerHTML = '<p class="text-center py-10 text-slate-400 font-bold">No past bookings found.</p>';
+
+                buildCalendar(); 
+                
+            } catch (error) { console.error(error); }
+        }
+
+        async function updateBookingStatus(btn, id, newStatus) {
+            btn.innerHTML = '...'; btn.disabled = true;
+            try {
+                await fetch(`http://localhost:3000/api/bookings/${id}/status`, { 
+                    method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: newStatus })
+                });
+                showToast(`Approved! Email sent & Calendar updated.`); 
+                await loadBookings(); 
+            } catch (error) { alert("Error connecting to server."); btn.disabled = false; }
+        }
+
+        async function markAsPaid(btn, id) {
+            btn.innerHTML = '...'; btn.disabled = true;
+            try {
+                const res = await fetch(`http://localhost:3000/api/bookings/${id}/pay`, { method: 'PATCH' });
+                if(res.ok) {
+                    showToast("Payment marked as Paid & receipt sent!"); 
+                    await loadBookings(); 
+                } else { alert("Failed"); btn.disabled = false; }
+            } catch (error) { alert("Error connecting to server."); btn.disabled = false; }
+        }
+
+        async function deleteBooking(btn, id) {
+            if(!confirm("Are you sure you want to completely remove this booking?")) return;
+            btn.innerHTML = '...'; btn.disabled = true;
+            try {
+                const res = await fetch(`http://localhost:3000/api/bookings/${id}?source=admin`, { method: 'DELETE' });
+                if(res.ok) {
+                    showToast(`Reservation successfully deleted.`); 
+                    await loadBookings(); 
+                } else { alert("Failed"); btn.disabled = false; }
+            } catch (error) { alert("Error connecting to server."); btn.disabled = false; }
+        }
+
+        // ================= DYNAMIC CALENDAR LOGIC =================
+        function changeMonth(dir) {
+            calMonth += dir;
+            if (calMonth > 11) { calMonth = 0; calYear++; }
+            else if (calMonth < 0) { calMonth = 11; calYear--; }
+            buildCalendar();
+        }
+
+        function buildCalendar() {
+            const grid = document.getElementById('calendarGrid');
+            grid.innerHTML = '';
+            
+            const now = new Date(); 
+            const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+            document.getElementById('calendarMonthLabel').textContent = `${monthNames[calMonth]} ${calYear}`;
+
+            const firstDay = new Date(calYear, calMonth, 1).getDay(); 
+            const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+
+            for(let i=0; i<firstDay; i++) { grid.innerHTML += `<div class="min-h-[100px] rounded-2xl bg-slate-50/30"></div>`; }
+
+            for(let day=1; day<=daysInMonth; day++) {
+                const monthStr = (calMonth + 1).toString().padStart(2, '0');
+                const dayStr = day.toString().padStart(2, '0');
+                const currentDateStr = `${calYear}-${monthStr}-${dayStr}`;
+                
+                let pills = '';
+                liveBookings.forEach(b => {
+                    if (b.status === 'Confirmed') { 
+                        const fCheckInTime = formatTime(b.checkInTime) || '14:00';
+                        const fCheckOutTime = formatTime(b.checkOutTime) || '12:00';
+                        
+                        const referenceDate = b.stayType === 'day' ? b.checkIn : b.checkOut;
+                        const isFinished = isDatePast(referenceDate, b.checkOutTime);
+
+                        let pillClass = '';
+                        let pillText = '';
+
+                        if (b.stayType === 'day' && b.checkIn === currentDateStr) {
+                            pillClass = isFinished ? 'bg-slate-200 text-slate-500 opacity-75' : 'bg-blue-50 text-blue-700';
+                            pillText = isFinished ? `${b.guestName} ✓ Done` : `${b.guestName} (${fCheckInTime} - ${fCheckOutTime})`;
+                            pills += `<div class="w-full ${pillClass} rounded text-[9px] font-bold px-1.5 py-1 mt-1 truncate" title="${b.guestName}">${pillText}</div>`;
+                            
+                        } else if (b.stayType === 'overnight') {
+                            if (b.checkIn === currentDateStr) {
+                                pillClass = isFinished ? 'bg-slate-200 text-slate-500 opacity-75' : 'bg-emerald-50 text-emerald-700';
+                                pillText = isFinished ? `${b.guestName} (In) ✓` : `${b.guestName} (In: ${fCheckInTime})`;
+                                pills += `<div class="w-full ${pillClass} rounded text-[9px] font-bold px-1.5 py-1 mt-1 truncate" title="${b.guestName}">${pillText}</div>`;
+                                
+                            } else if (b.checkOut === currentDateStr) {
+                                pillClass = isFinished ? 'bg-slate-200 text-slate-500 opacity-75' : 'bg-slate-100 text-slate-600';
+                                pillText = isFinished ? `${b.guestName} (Out) ✓ Done` : `${b.guestName} (Out: ${fCheckOutTime})`;
+                                pills += `<div class="w-full ${pillClass} rounded text-[9px] font-bold px-1.5 py-1 mt-1 truncate" title="${b.guestName}">${pillText}</div>`;
+                                
+                            } else if (b.checkIn < currentDateStr && b.checkOut > currentDateStr) {
+                                pillClass = isFinished ? 'bg-slate-200 text-slate-500 opacity-50' : 'bg-emerald-50 text-emerald-700 opacity-70';
+                                pillText = isFinished ? `${b.guestName} (Stay) ✓` : `${b.guestName} (Stay)`;
+                                pills += `<div class="w-full ${pillClass} rounded text-[9px] font-bold px-1.5 py-1 mt-1 truncate" title="${b.guestName}">${pillText}</div>`;
+                            }
+                        }
+                    }
+                });
+
+                const isToday = (now.getDate() === day && now.getMonth() === calMonth && now.getFullYear() === calYear);
+                const cellClass = pills !== '' ? 'bg-white border-emerald-100 shadow-sm' : 'bg-slate-50/50 border-transparent';
+                const todayHighlight = isToday ? `<div class="absolute top-2 right-2 w-2 h-2 bg-luxury-gold rounded-full shadow-glow"></div>` : '';
+
+                grid.innerHTML += `
+                <div class="min-h-[100px] rounded-2xl p-2 border ${cellClass} cal-cell relative flex flex-col overflow-hidden">
+                    <span class="text-sm font-bold ${isToday ? 'text-luxury-gold' : 'text-slate-700'}">${day}</span>
+                    ${todayHighlight}
+                    <div class="flex-1 overflow-y-auto mt-1 no-scrollbar space-y-1">
+                        ${pills}
+                    </div>
+                </div>`;
+            }
+        }
+
+        // ================= PROMO CODE LOGIC =================
+        function togglePromoForm() { document.getElementById('promoFormPanel').classList.toggle('show'); }
+
+        async function loadPromos() {
+            const list = document.getElementById('promoList');
+            try {
+                const response = await fetch('http://localhost:3000/api/promos');
+                const promos = await response.json();
+                list.innerHTML = '';
+                
+                promos.forEach(p => {
+                    const isExpired = p.expiryDate && new Date(p.expiryDate) < new Date();
+                    const statusBadge = isExpired || !p.active 
+                        ? `<span class="px-3 py-1 bg-slate-200 text-slate-500 text-[10px] font-bold uppercase rounded-lg mb-4 inline-block">Expired</span>`
+                        : `<span class="px-3 py-1 bg-emerald-50 text-emerald-600 text-[10px] font-bold uppercase rounded-lg mb-4 inline-block">Active</span>`;
+                    
+                    const styling = isExpired || !p.active ? 'opacity-70 bg-slate-50 border-slate-200' : 'bg-white shadow-soft border-luxury-border';
+                    const titleStrike = isExpired || !p.active ? 'line-through text-slate-400' : 'text-luxury-dark';
+
+                    const card = `
+                    <div class="rounded-[2rem] p-7 border relative overflow-hidden ${styling}">
+                        <div class="absolute top-0 left-0 w-full h-1.5 ${isExpired || !p.active ? 'bg-slate-300' : 'bg-emerald-400'}"></div>
+                        ${statusBadge}
+                        <h3 class="text-3xl font-serif font-bold tracking-widest ${titleStrike}">${p.code}</h3>
+                        <p class="text-luxury-gold font-bold text-xl mb-1">-₱${p.discount.toLocaleString('en-PH')}</p>
+                        <p class="text-xs text-slate-500 font-medium mb-4 h-8 overflow-hidden">${p.description || 'No description provided.'}</p>
+                        <div class="pt-4 border-t border-slate-200 flex justify-between items-center text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                            <div class="flex gap-4"><span>Used: ${p.usageCount}x</span><span>Exp: ${p.expiryDate || 'Never'}</span></div>
+                        </div>
+                        <button onclick="deletePromo('${p._id}')" class="text-rose-500 hover:text-rose-700 font-bold text-[10px] uppercase flex items-center gap-1 mt-5 transition-colors"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg> Delete Promo</button>
+                    </div>`;
+                    list.insertAdjacentHTML('beforeend', card);
+                });
+            } catch (error) { console.error(error); }
+        }
+
+        async function savePromo() {
+            const code = document.getElementById('newCodeName').value.trim().toUpperCase();
+            const discount = document.getElementById('newCodeDiscount').value;
+            const desc = document.getElementById('newCodeDesc').value.trim();
+            const expiry = document.getElementById('newCodeExpiry').value;
+            
+            if(!code || !discount) return alert('Fill code and discount');
+
+            try {
+                await fetch('http://localhost:3000/api/promos', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code, discount: Number(discount), description: desc, expiryDate: expiry })
+                });
+                showToast("Promo published successfully!");
+                document.getElementById('newCodeName').value = '';
+                document.getElementById('newCodeDiscount').value = '';
+                document.getElementById('newCodeDesc').value = '';
+                document.getElementById('newCodeExpiry').value = '';
+                togglePromoForm();
+                loadPromos(); 
+            } catch (error) { alert("Failed to save."); }
+        }
+
+        async function deletePromo(id) {
+            if(!confirm("Are you sure you want to completely remove this promo code?")) return;
+            try {
+                await fetch(`http://localhost:3000/api/promos/${id}`, { method: 'DELETE' });
+                showToast("Promo deleted successfully.");
+                loadPromos(); 
+            } catch (e) { alert("Failed to delete promo."); }
+        }
+    </script>
+</body>
+</html>

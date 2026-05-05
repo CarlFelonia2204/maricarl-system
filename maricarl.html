@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Maricarl Resort | Exclusive Booking</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
+    <script>
+        tailwind.config = { 
+            theme: { 
+                extend: { 
+                    colors: { 
+                        luxury: { dark: '#0A0A0A', gold: '#D4AF37', sand: '#FAF9F6', border: '#E5E5E5' } 
+                    }, 
+                    fontFamily: { 
+                        serif: ['"Cinzel"', 'serif'], 
+                        sans: ['"Outfit"', 'sans-serif'] 
+                    },
+                    boxShadow: {
+                        'soft': '0 10px 40px -10px rgba(0,0,0,0.06)',
+                        'float': '0 20px 50px -20px rgba(212, 175, 55, 0.25)',
+                        'inner-soft': 'inset 0 2px 4px 0 rgba(0, 0, 0, 0.02)',
+                        'glass': '0 8px 32px 0 rgba(0, 0, 0, 0.1)',
+                        'dropdown': '0 20px 50px -20px rgba(0, 0, 0, 0.15)'
+                    }
+                } 
+            } 
+        }
+    </script>
+    <style>
+        body { background-color: #FAF9F6; font-family: 'Outfit', sans-serif; -webkit-tap-highlight-color: transparent; }
+        
+        .floating-input:focus ~ .floating-label, .floating-input:not(:placeholder-shown) ~ .floating-label { 
+            transform: translateY(-130%) scale(0.85); color: #D4AF37; font-weight: 600; 
+        }
+        input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        
+        .segment-active { transform: translateX(0%); transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
+        #dayTourRadio:checked ~ .segment-active { transform: translateX(100%); }
+        
+        #checkoutContainer { transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1); max-width: 50%; overflow: hidden; }
+        #checkoutContainer.collapsed { max-width: 0; padding-left: 0; padding-right: 0; opacity: 0; border-color: transparent; }
+        
+        .glass-card { 
+            background: linear-gradient(135deg, rgba(255,255,255,0.9), rgba(255,255,255,0.7)); 
+            backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 1); box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.05);
+        }
+        
+        .expandable { transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1); max-height: 0; opacity: 0; transform: translateY(15px); overflow: hidden; }
+        .expandable.show { max-height: 500px; opacity: 1; transform: translateY(0); margin-top: 2rem; }
+        
+        .flatpickr-calendar { width: max-content !important; box-sizing: border-box !important; border-radius: 1.5rem !important; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.15) !important; padding: 10px !important; font-family: 'Outfit', sans-serif; border: none !important; }
+        .flatpickr-day.selected { background: #0A0A0A !important; border-color: #0A0A0A !important; color: #D4AF37 !important; font-weight: 700; }
+        
+        .modal-overlay { transition: opacity 0.4s ease; opacity: 0; pointer-events: none; }
+        .modal-overlay.active { opacity: 1; pointer-events: auto; }
+        .modal-content { transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1); transform: translateY(30px) scale(0.95); }
+        .modal-overlay.active .modal-content { transform: translateY(0) scale(1); }
+        
+        /* Custom Scrollbar for the elegant time dropdown */
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #E5E5E5; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #D4AF37; }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center lg:p-6 overflow-x-hidden text-luxury-dark selection:bg-luxury-gold selection:text-white">
+
+    <div id="toast" class="fixed top-8 left-1/2 -translate-x-1/2 z-[100] hidden transition-all duration-500 opacity-0 transform -translate-y-4">
+        <div class="bg-luxury-dark text-white rounded-2xl px-6 py-4 flex items-center gap-4 shadow-float border border-white/10 backdrop-blur-md">
+            <div class="w-10 h-10 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
+            </div>
+            <div><p class="text-sm font-bold tracking-wide" id="toastTitle">Success!</p><p id="toastMessage" class="text-xs text-white/70 font-medium">Action completed.</p></div>
+        </div>
+    </div>
+
+    <!-- Manage Booking Button -->
+    <div class="absolute top-0 right-0 p-6 lg:p-8 z-50 w-full flex justify-end pointer-events-none">
+        <button onclick="toggleManageModal(true)" class="pointer-events-auto px-8 py-4 bg-white border border-gray-200 text-black hover:bg-gray-50 hover:text-luxury-dark rounded-full text-xs font-bold tracking-widest shadow-soft hover:shadow-md transition-all duration-300 active:scale-95 uppercase">
+            Manage Reservation
+        </button>
+    </div>
+
+    <!-- Manage Booking Modal -->
+    <div id="manageModal" class="modal-overlay fixed inset-0 bg-luxury-dark/90 backdrop-blur-md z-50 flex items-center justify-center p-4">
+        <div class="modal-content bg-luxury-sand w-full max-w-xl rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh] border border-white/20">
+            <div class="p-8 border-b border-luxury-border flex justify-between items-center bg-white">
+                <h3 class="text-3xl font-serif font-bold tracking-tight">My Bookings</h3>
+                <button onclick="toggleManageModal(false)" class="text-gray-400 hover:text-luxury-dark transition-colors bg-gray-50 hover:bg-gray-100 p-2 rounded-full"><svg class="w-5 h-5" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg></button>
+            </div>
+            <div class="p-8 bg-white border-b border-luxury-border flex gap-4">
+                <input type="email" id="searchEmail" placeholder="Enter your booking email" class="flex-1 bg-luxury-sand border border-luxury-border rounded-2xl px-5 py-4 outline-none focus:border-luxury-gold focus:ring-2 focus:ring-luxury-gold/20 transition-all text-sm font-medium">
+                <button onclick="findMyBookings(false)" id="searchBtn" class="px-8 py-4 bg-luxury-dark text-white font-bold rounded-2xl text-sm hover:bg-black transition-colors shadow-md">Search</button>
+            </div>
+            <div id="myBookingsList" class="p-8 overflow-y-auto flex-1 flex flex-col gap-5 bg-luxury-sand/50">
+                <p class="text-center text-gray-400 text-sm py-8 font-medium">Enter your email above to locate your reservations.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN WRAPPER -->
+    <div class="w-full max-w-[1300px] min-h-screen lg:min-h-[90vh] bg-white lg:rounded-[3rem] lg:shadow-[0_20px_60px_-15px_rgba(0,0,0,0.1)] overflow-hidden flex flex-col lg:flex-row relative z-10">
+        
+        <!-- Luxury Image & DIRECT MAP Section -->
+        <div class="relative w-full h-[65vh] lg:h-auto lg:w-[45%] flex-shrink-0 z-0 flex flex-col justify-end">
+            <img src="https://images.unsplash.com/photo-1613490900233-ea41ddbc0469?q=80&w=1600&auto=format&fit=crop" class="absolute inset-0 w-full h-full object-cover object-center">
+            <div class="absolute inset-0 bg-gradient-to-t from-luxury-dark/95 via-luxury-dark/50 to-transparent lg:bg-gradient-to-r lg:from-luxury-dark/95 lg:via-luxury-dark/60 lg:to-transparent pointer-events-none"></div>
+            
+            <div class="relative z-10 p-8 lg:p-14 w-full h-full flex flex-col justify-center pointer-events-none">
+                <div class="w-12 h-1 bg-luxury-gold mb-6 rounded-full opacity-90 shadow-[0_0_15px_rgba(212,175,55,0.5)]"></div>
+                <h1 class="text-5xl lg:text-7xl font-serif text-white mb-4 leading-tight pointer-events-none">Maricarl<br>Resort</h1>
+                <p class="text-white/80 text-lg lg:text-xl font-light tracking-wider mb-8 pointer-events-none">Your private sanctuary.</p>
+
+                <!-- LIVE EMBEDDED GOOGLE MAP -->
+                <div class="mt-4 backdrop-blur-xl bg-black/40 border border-white/10 p-5 rounded-[2rem] w-full max-w-lg transition-all shadow-glass flex flex-col gap-4 pointer-events-auto">
+                    <div class="flex items-center gap-3 px-2 pointer-events-none">
+                        <div class="w-8 h-8 rounded-full bg-luxury-gold/20 flex items-center justify-center border border-luxury-gold/30">
+                            <svg class="w-4 h-4 text-luxury-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                        </div>
+                        <div>
+                            <h3 class="text-white font-serif text-base tracking-wide leading-none mb-1">Tibagan, San Miguel</h3>
+                            <p class="text-white/60 text-[10px] uppercase tracking-widest leading-none">Bulacan, Philippines</p>
+                        </div>
+                    </div>
+                    <div class="w-full h-56 md:h-72 rounded-xl overflow-hidden border border-white/10 bg-gray-900 relative z-50">
+                        <iframe 
+                            src="https://maps.google.com/maps?q=42H2%2BM9R,%20San%20Miguel,%20Bulacan&t=m&z=15&ie=UTF8&iwloc=&output=embed" 
+                            width="100%" 
+                            height="100%" 
+                            style="border:0;" 
+                            allowfullscreen="" 
+                            loading="lazy">
+                        </iframe>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Form Section -->
+        <div class="w-full lg:w-[55%] lg:-ml-[1px] bg-white relative z-10 rounded-t-[3rem] lg:rounded-none px-6 py-12 lg:p-20 overflow-y-auto">
+            <div class="max-w-md mx-auto lg:max-w-xl w-full pt-6">
+                
+                <div class="mb-10">
+                    <h2 class="text-4xl font-serif mb-4 tracking-tight">Reserve Your Stay</h2>
+                    
+                    <div class="flex flex-col sm:flex-row flex-wrap gap-3 mt-5 mb-6">
+                        <div class="bg-gradient-to-br from-amber-50 to-orange-50/30 text-amber-900 border border-amber-200/60 px-4 py-2.5 rounded-xl shadow-sm">
+                            <span class="block text-[9px] font-bold tracking-widest uppercase opacity-70 mb-0.5">Overnight (Sun-Thu)</span>
+                            <span class="text-sm font-bold">₱12,000</span>
+                        </div>
+                        <div class="bg-gradient-to-br from-amber-50 to-orange-50/30 text-amber-900 border border-amber-200/60 px-4 py-2.5 rounded-xl shadow-sm">
+                            <span class="block text-[9px] font-bold tracking-widest uppercase opacity-70 mb-0.5">Weekend (Fri-Sat)</span>
+                            <span class="text-sm font-bold">₱15,000</span>
+                        </div>
+                        <div class="bg-gradient-to-br from-blue-50 to-slate-50/30 text-blue-900 border border-blue-200/60 px-4 py-2.5 rounded-xl shadow-sm">
+                            <span class="block text-[9px] font-bold tracking-widest uppercase opacity-70 mb-0.5">Whole Day</span>
+                            <span class="text-sm font-bold">₱8,000</span>
+                        </div>
+                    </div>
+                    <p class="text-gray-500 font-medium text-sm">Select your visit type and calculate your total instantly.</p>
+                </div>
+
+                <form id="bookingForm" class="space-y-8">
+                    
+                    <div class="relative bg-gray-50 p-1.5 rounded-2xl flex items-center shadow-inner-soft border border-gray-100">
+                        <div id="segmentSlider" class="absolute left-1.5 top-1.5 w-[calc(50%-0.375rem)] h-[calc(100%-0.75rem)] bg-white rounded-xl z-0 transition-transform duration-500 ease-out shadow-sm border border-gray-100"></div>
+                        <label class="flex-1 text-center py-3.5 relative z-10 cursor-pointer group">
+                            <input type="radio" name="stayType" value="overnight" class="sr-only" checked>
+                            <span id="labelOvernight" class="text-sm font-bold text-luxury-dark transition-colors">Overnight Stay</span>
+                        </label>
+                        <label class="flex-1 text-center py-3.5 relative z-10 cursor-pointer group">
+                            <input type="radio" name="stayType" value="day" class="sr-only">
+                            <span id="labelDay" class="text-sm font-bold text-gray-400 transition-colors">Whole Day Only</span>
+                        </label>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div class="relative">
+                            <input type="text" id="fullName" placeholder=" " required class="floating-input w-full bg-transparent border-b-2 border-luxury-border py-4 text-luxury-dark focus:border-luxury-gold outline-none peer font-semibold text-lg transition-colors">
+                            <label class="floating-label absolute left-0 top-4 text-gray-400 transition-all origin-left font-medium">Full Name</label>
+                        </div>
+                        <div class="relative">
+                            <input type="email" id="email" placeholder=" " required class="floating-input w-full bg-transparent border-b-2 border-luxury-border py-4 text-luxury-dark focus:border-luxury-gold outline-none peer font-semibold text-lg transition-colors">
+                            <label class="floating-label absolute left-0 top-4 text-gray-400 transition-all origin-left font-medium">Email Address</label>
+                        </div>
+                    </div>
+                    <div class="relative w-full mt-2">
+                        <input type="tel" id="phone" placeholder=" " required class="floating-input w-full bg-transparent border-b-2 border-luxury-border py-4 text-luxury-dark focus:border-luxury-gold outline-none peer font-semibold text-lg transition-colors">
+                        <label class="floating-label absolute left-0 top-4 text-gray-400 transition-all origin-left font-medium">Phone Number</label>
+                    </div>
+
+                    <div class="flex gap-5 w-full">
+                        <div id="checkInContainer" class="bg-gray-50 hover:bg-gray-100 rounded-2xl p-5 border border-transparent flex-1 cursor-pointer transition-colors focus-within:border-luxury-gold focus-within:bg-white focus-within:shadow-sm">
+                            <label id="dateLabelPrimary" class="block text-[10px] font-bold text-luxury-gold tracking-widest uppercase mb-1.5">Check-in Date</label>
+                            <input type="text" id="checkIn" placeholder="Select Date" required class="w-full bg-transparent text-luxury-dark font-bold text-lg outline-none cursor-pointer placeholder-gray-400">
+                        </div>
+                        <div id="checkoutContainer" class="bg-gray-50 hover:bg-gray-100 rounded-2xl p-5 border border-transparent w-1/2 cursor-pointer transition-colors focus-within:border-luxury-gold focus-within:bg-white focus-within:shadow-sm">
+                            <label class="block text-[10px] font-bold text-luxury-gold tracking-widest uppercase mb-1.5">Check-out Date</label>
+                            <input type="text" id="checkOut" placeholder="Select Date" class="w-full bg-transparent text-luxury-dark font-bold text-lg outline-none cursor-pointer placeholder-gray-400">
+                        </div>
+                    </div>
+
+                    <!-- CUSTOM ELEGANT TIME DROPDOWNS (Replaces Clunky Native Selectors) -->
+                    <div class="flex gap-5 w-full">
+                        
+                        <!-- Custom Check-in Time -->
+                        <div class="relative bg-gray-50 hover:bg-gray-100 rounded-2xl p-5 border border-transparent flex-1 transition-colors focus-within:border-luxury-gold focus-within:bg-white focus-within:shadow-sm cursor-pointer" id="checkInWrapper" onclick="toggleTimeDropdown('checkIn')">
+                            <label class="block text-[10px] font-bold text-luxury-gold tracking-widest uppercase mb-1.5">Check-in Time</label>
+                            <div class="flex justify-between items-center w-full">
+                                <input type="text" id="checkInTimeDisplay" readonly value="02:00 PM" class="w-full bg-transparent text-luxury-dark font-bold text-lg outline-none cursor-pointer pointer-events-none">
+                                <svg id="checkInIcon" class="w-5 h-5 text-gray-400 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </div>
+                            <input type="hidden" id="checkInTime" value="14:00" required>
+                            
+                            <!-- The Dropdown Glass Menu -->
+                            <div id="checkInDropdown" class="absolute left-0 top-[105%] w-full bg-white/95 backdrop-blur-xl border border-gray-100 rounded-2xl shadow-dropdown z-50 opacity-0 invisible transition-all duration-300 translate-y-2 max-h-60 overflow-y-auto custom-scrollbar">
+                                <!-- Options populated by JavaScript -->
+                            </div>
+                        </div>
+
+                        <!-- Custom Check-out Time -->
+                        <div class="relative bg-gray-50 hover:bg-gray-100 rounded-2xl p-5 border border-transparent w-1/2 transition-colors focus-within:border-luxury-gold focus-within:bg-white focus-within:shadow-sm cursor-pointer" id="checkOutWrapper" onclick="toggleTimeDropdown('checkOut')">
+                            <label class="block text-[10px] font-bold text-luxury-gold tracking-widest uppercase mb-1.5">Check-out Time</label>
+                            <div class="flex justify-between items-center w-full">
+                                <input type="text" id="checkOutTimeDisplay" readonly value="12:00 PM" class="w-full bg-transparent text-luxury-dark font-bold text-lg outline-none cursor-pointer pointer-events-none">
+                                <svg id="checkOutIcon" class="w-5 h-5 text-gray-400 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </div>
+                            <input type="hidden" id="checkOutTime" value="12:00" required>
+                            
+                            <!-- The Dropdown Glass Menu -->
+                            <div id="checkOutDropdown" class="absolute left-0 top-[105%] w-full bg-white/95 backdrop-blur-xl border border-gray-100 rounded-2xl shadow-dropdown z-50 opacity-0 invisible transition-all duration-300 translate-y-2 max-h-60 overflow-y-auto custom-scrollbar">
+                                <!-- Options populated by JavaScript -->
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5 w-full">
+                        <div class="bg-white rounded-2xl p-5 border border-luxury-border flex justify-between items-center shadow-sm hover:shadow-md transition-shadow">
+                            <div>
+                                <label class="block text-[10px] font-bold text-luxury-gold tracking-widest uppercase mb-1">Total Guests</label>
+                                <p class="text-xs font-bold text-gray-400">Max capacity: 50</p>
+                            </div>
+                            <div class="flex items-center bg-gray-50 rounded-xl p-1.5 border border-luxury-border">
+                                <button type="button" id="btnDecrease" class="w-10 h-10 rounded-lg flex items-center justify-center text-luxury-dark hover:bg-white hover:shadow-sm transition-all active:scale-90 font-bold text-xl">-</button>
+                                <input type="number" id="paxInput" value="2" min="1" max="50" class="w-10 text-center font-serif text-2xl font-bold bg-transparent outline-none text-luxury-dark">
+                                <button type="button" id="btnIncrease" class="w-10 h-10 rounded-lg flex items-center justify-center text-luxury-dark hover:bg-white hover:shadow-sm transition-all active:scale-90 font-bold text-xl">+</button>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-2xl p-5 border border-luxury-border flex flex-col justify-center shadow-sm hover:shadow-md transition-shadow">
+                            <label class="block text-[10px] font-bold text-luxury-gold tracking-widest uppercase mb-3">Mode of Payment</label>
+                            <div class="flex gap-6">
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="radio" name="paymentMode" value="Cash" checked class="accent-luxury-gold w-4 h-4 cursor-pointer">
+                                    <span class="text-sm font-bold text-luxury-dark">Cash</span>
+                                </label>
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="radio" name="paymentMode" value="GCash" class="accent-luxury-gold w-4 h-4 cursor-pointer">
+                                    <span class="text-sm font-bold text-luxury-dark">GCash</span>
+                                </label>
+                            </div>
+                            <p class="text-[9px] text-gray-400 font-bold mt-2.5 uppercase tracking-widest">* Settled upon check-out</p>
+                        </div>
+                    </div>
+
+                    <div class="relative group">
+                        <div class="flex items-center bg-white rounded-2xl p-2 border border-luxury-border focus-within:border-luxury-gold focus-within:ring-2 focus-within:ring-luxury-gold/20 transition-all shadow-sm">
+                            <input type="text" id="promoInput" placeholder="Enter Promo Code" class="w-full pl-5 bg-transparent uppercase font-bold text-luxury-dark outline-none py-3 placeholder-gray-300">
+                            <button type="button" id="applyPromoBtn" class="px-8 py-4 bg-luxury-dark text-white rounded-xl text-xs font-bold hover:bg-black active:scale-95 uppercase tracking-widest transition-all">Apply</button>
+                        </div>
+                        <p id="promoMessage" class="absolute -bottom-6 left-2 text-xs font-bold transition-opacity duration-300 opacity-0"></p>
+                    </div>
+
+                    <div id="summaryCard" class="expandable relative z-20">
+                        <div class="glass-card rounded-[2rem] p-8 shadow-float">
+                            <div class="flex items-center justify-between mb-6 border-b border-gray-200 pb-5">
+                                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest">Booking Summary</h3>
+                            </div>
+                            <div class="space-y-4 mb-6 text-sm font-medium">
+                                <div class="flex justify-between items-center text-gray-600">
+                                    <span id="stayDetails">0 Nights • 2 Guests</span>
+                                    <span class="font-bold text-luxury-dark text-base" id="basePriceDisplay">₱0</span>
+                                </div>
+                                <div id="discountRow" class="flex justify-between items-center text-emerald-600 hidden pt-2 bg-emerald-50/50 p-3 rounded-xl border border-emerald-100">
+                                    <span class="font-bold flex items-center gap-2"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> Discount Applied</span>
+                                    <span class="font-bold text-base" id="discountDisplay">-₱0</span>
+                                </div>
+                            </div>
+                            <div class="flex justify-between items-end border-t border-gray-200 pt-6">
+                                <span class="text-gray-500 text-sm font-bold uppercase tracking-wider">Total Amount</span>
+                                <span class="text-5xl font-serif text-luxury-dark font-bold tracking-tight" id="finalTotalDisplay">₱0</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit" id="submitBtn" disabled class="w-full bg-luxury-dark text-luxury-gold text-lg font-bold tracking-wide py-5 rounded-2xl transition-all hover:-translate-y-1 hover:shadow-float active:scale-95 disabled:bg-gray-200 disabled:text-gray-400 disabled:hover:translate-y-0 disabled:shadow-none uppercase mt-4">Confirm Reservation</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let state = { stayType: 'overnight', baseTotal: 0, discountApplied: 0, promoCodeStr: 'None', totalNights: 0, pax: 2, isValidDates: false };
+        let checkInDateStr = null; let checkOutDateStr = null;
+        let disabledDatesArray = []; 
+
+        const stayTypeRadios = document.querySelectorAll('input[name="stayType"]');
+        const checkoutContainer = document.getElementById('checkoutContainer');
+        const paxInput = document.getElementById('paxInput');
+        const summaryCard = document.getElementById('summaryCard');
+        const submitBtn = document.getElementById('submitBtn');
+        const promoMsg = document.getElementById('promoMessage');
+
+        // --- CUSTOM ELEGANT TIME DROPDOWN LOGIC ---
+        function populateTimeDropdowns() {
+            let html = '';
+            for (let i = 0; i < 24; i++) {
+                for (let j = 0; j < 60; j += 30) { // 30-minute intervals
+                    let hour = i;
+                    let ampm = hour >= 12 ? 'PM' : 'AM';
+                    let displayHour = hour % 12 || 12;
+                    displayHour = displayHour.toString().padStart(2, '0');
+                    let displayMin = j.toString().padStart(2, '0');
+                    let displayTime = `${displayHour}:${displayMin} ${ampm}`;
+                    
+                    let valHour = hour.toString().padStart(2, '0');
+                    let valTime = `${valHour}:${displayMin}`;
+                    
+                    html += `<div class="px-5 py-3.5 text-sm font-bold text-gray-600 hover:bg-luxury-gold hover:text-white cursor-pointer transition-all duration-200 border-b border-gray-50 last:border-0" 
+                             onclick="selectTime(event, '${displayTime}', '${valTime}')" data-time="${valTime}">${displayTime}</div>`;
+                }
+            }
+            document.getElementById('checkInDropdown').innerHTML = html;
+            document.getElementById('checkOutDropdown').innerHTML = html;
+        }
+
+        let activeDropdown = null;
+
+        function toggleTimeDropdown(type) {
+            const dropdown = document.getElementById(`${type}Dropdown`);
+            const icon = document.getElementById(`${type}Icon`);
+            const isClosed = dropdown.classList.contains('opacity-0');
+
+            // Close the other one if open
+            if (activeDropdown && activeDropdown !== type) {
+                document.getElementById(`${activeDropdown}Dropdown`).classList.replace('opacity-100', 'opacity-0');
+                document.getElementById(`${activeDropdown}Dropdown`).classList.replace('visible', 'invisible');
+                document.getElementById(`${activeDropdown}Dropdown`).classList.replace('translate-y-0', 'translate-y-2');
+                document.getElementById(`${activeDropdown}Icon`).style.transform = 'rotate(0deg)';
+                document.getElementById(`${activeDropdown}Icon`).classList.remove('text-luxury-gold');
+            }
+
+            if (isClosed) {
+                dropdown.classList.replace('opacity-0', 'opacity-100');
+                dropdown.classList.replace('invisible', 'visible');
+                dropdown.classList.replace('translate-y-2', 'translate-y-0');
+                icon.style.transform = 'rotate(180deg)';
+                icon.classList.add('text-luxury-gold');
+                activeDropdown = type;
+            } else {
+                dropdown.classList.replace('opacity-100', 'opacity-0');
+                dropdown.classList.replace('visible', 'invisible');
+                dropdown.classList.replace('translate-y-0', 'translate-y-2');
+                icon.style.transform = 'rotate(0deg)';
+                icon.classList.remove('text-luxury-gold');
+                activeDropdown = null;
+            }
+        }
+
+        function selectTime(event, displayVal, hiddenVal) {
+            event.stopPropagation(); // Stop click from propagating up and toggling the menu again
+            if (!activeDropdown) return;
+
+            document.getElementById(`${activeDropdown}TimeDisplay`).value = displayVal;
+            document.getElementById(`${activeDropdown}Time`).value = hiddenVal;
+            
+            const dropdown = document.getElementById(`${activeDropdown}Dropdown`);
+            const icon = document.getElementById(`${activeDropdown}Icon`);
+            
+            dropdown.classList.replace('opacity-100', 'opacity-0');
+            dropdown.classList.replace('visible', 'invisible');
+            dropdown.classList.replace('translate-y-0', 'translate-y-2');
+            icon.style.transform = 'rotate(0deg)';
+            icon.classList.remove('text-luxury-gold');
+            activeDropdown = null;
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            if (activeDropdown && !e.target.closest(`#${activeDropdown}Wrapper`)) {
+                document.getElementById(`${activeDropdown}Dropdown`).classList.replace('opacity-100', 'opacity-0');
+                document.getElementById(`${activeDropdown}Dropdown`).classList.replace('visible', 'invisible');
+                document.getElementById(`${activeDropdown}Dropdown`).classList.replace('translate-y-0', 'translate-y-2');
+                document.getElementById(`${activeDropdown}Icon`).style.transform = 'rotate(0deg)';
+                document.getElementById(`${activeDropdown}Icon`).classList.remove('text-luxury-gold');
+                activeDropdown = null;
+            }
+        });
+
+        // Initialize custom dropdowns
+        populateTimeDropdowns();
+
+
+        // --- FLATPICKR LOGIC ---
+        async function fetchUnavailableDates() {
+            try {
+                const res = await fetch('http://localhost:3000/api/bookings/unavailable');
+                const dates = await res.json();
+                
+                if (JSON.stringify(dates) !== JSON.stringify(disabledDatesArray)) {
+                    disabledDatesArray = dates;
+                    fpCheckIn.set('disable', disabledDatesArray);
+                    fpCheckOut.set('disable', disabledDatesArray);
+                }
+            } catch(e) { console.error("Error fetching dates"); }
+        }
+        setInterval(fetchUnavailableDates, 3000); 
+
+        const fpCheckOut = flatpickr("#checkOut", { 
+            dateFormat: "Y-m-d", 
+            disableMobile: "true", 
+            disable: disabledDatesArray,
+            onChange: (dates, dateStr) => { checkOutDateStr = dateStr; calculatePricing(); } 
+        });
+        const fpCheckIn = flatpickr("#checkIn", { 
+            minDate: "today", 
+            dateFormat: "Y-m-d", 
+            disableMobile: "true", 
+            disable: disabledDatesArray,
+            onChange: (dates, dateStr) => {
+                checkInDateStr = dateStr;
+                if (state.stayType === 'overnight') {
+                    let nextDay = new Date(dates[0]); nextDay.setDate(nextDay.getDate() + 1);
+                    fpCheckOut.set("minDate", nextDay);
+                    if (checkOutDateStr && new Date(checkOutDateStr) <= new Date(dateStr)) { fpCheckOut.clear(); checkOutDateStr = null; }
+                    setTimeout(() => fpCheckOut.open(), 100);
+                }
+                calculatePricing();
+            }
+        });
+
+        fetchUnavailableDates();
+
+        document.getElementById('checkInContainer').addEventListener('click', () => fpCheckIn.open());
+        document.getElementById('checkoutContainer').addEventListener('click', () => fpCheckOut.open());
+
+        stayTypeRadios.forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                state.stayType = e.target.value;
+                const slider = document.getElementById('segmentSlider');
+                if (state.stayType === 'day') {
+                    slider.style.transform = 'translateX(100%)';
+                    document.getElementById('labelDay').classList.replace('text-gray-400', 'text-luxury-dark');
+                    document.getElementById('labelOvernight').classList.replace('text-luxury-dark', 'text-gray-400');
+                    checkoutContainer.classList.add('collapsed'); document.getElementById('checkOut').required = false;
+                    document.getElementById('dateLabelPrimary').textContent = "Reservation Date";
+                    fpCheckOut.clear(); checkOutDateStr = null;
+                } else {
+                    slider.style.transform = 'translateX(0%)';
+                    document.getElementById('labelOvernight').classList.replace('text-gray-400', 'text-luxury-dark');
+                    document.getElementById('labelDay').classList.replace('text-luxury-dark', 'text-gray-400');
+                    checkoutContainer.classList.remove('collapsed'); document.getElementById('checkOut').required = true;
+                    document.getElementById('dateLabelPrimary').textContent = "Check-in Date";
+                }
+                calculatePricing();
+            });
+        });
+
+        function updatePaxUI(value) {
+            let val = parseInt(value); if (isNaN(val) || val < 1) val = 1; if (val > 50) val = 50;
+            state.pax = val; paxInput.value = val;
+            if (state.isValidDates) updateUI();
+        }
+        paxInput.addEventListener('change', (e) => updatePaxUI(e.target.value));
+        document.getElementById('btnDecrease').addEventListener('click', () => { if (state.pax > 1) updatePaxUI(state.pax - 1); });
+        document.getElementById('btnIncrease').addEventListener('click', () => { if (state.pax < 50) updatePaxUI(state.pax + 1); });
+
+        function calculatePricing() {
+            if (state.stayType === 'day') {
+                if (checkInDateStr) { state.baseTotal = 8000; state.isValidDates = true; updateUI(); } else invalidateSummary();
+            } else {
+                if (checkInDateStr && checkOutDateStr) {
+                    const checkIn = new Date(checkInDateStr); const checkOut = new Date(checkOutDateStr);
+                    if (checkIn < checkOut) {
+                        let total = 0; let nights = 0; let current = new Date(checkIn);
+                        while (current < checkOut) {
+                            if (current.getDay() === 5 || current.getDay() === 6) total += 15000; else total += 12000;
+                            nights++; current.setDate(current.getDate() + 1);
+                        }
+                        state.baseTotal = total; state.totalNights = nights; state.isValidDates = true; updateUI();
+                    } else invalidateSummary();
+                } else invalidateSummary();
+            }
+        }
+
+        function invalidateSummary() { state.isValidDates = false; summaryCard.classList.remove('show'); submitBtn.disabled = true; }
+
+        document.getElementById('applyPromoBtn').addEventListener('click', async () => {
+            const codeInput = document.getElementById('promoInput').value.trim().toUpperCase();
+            if (!codeInput) return showMsg('Enter a promo code.', 'text-rose-500');
+            if (!state.isValidDates) return showMsg('Please select your dates first.', 'text-luxury-gold');
+
+            const btn = document.getElementById('applyPromoBtn');
+            btn.innerHTML = '...'; btn.disabled = true;
+
+            try {
+                const res = await fetch(`http://localhost:3000/api/promos/verify/${codeInput}`);
+                if (res.ok) {
+                    const validPromo = await res.json();
+                    state.discountApplied = validPromo.discount;
+                    state.promoCodeStr = codeInput; 
+                    showMsg(`Success! ₱${validPromo.discount.toLocaleString('en-PH')} off applied.`, 'text-emerald-600'); 
+                    updateUI();
+                } else { 
+                    const error = await res.json();
+                    state.discountApplied = 0; 
+                    state.promoCodeStr = 'None';
+                    showMsg(error.error || 'Invalid code.', 'text-rose-500'); 
+                    updateUI(); 
+                }
+            } catch(e) { showMsg('Cannot verify code. Server offline.', 'text-rose-500'); }
+            btn.innerHTML = 'APPLY'; btn.disabled = false;
+        });
+
+        function showMsg(msg, color) { 
+            promoMsg.textContent = msg; 
+            promoMsg.className = `absolute -bottom-6 left-2 text-xs font-bold block transition-opacity duration-300 opacity-100 ${color}`; 
+        }
+        function clearPromoMsg() {
+            promoMsg.className = `absolute -bottom-6 left-2 text-xs font-bold block transition-opacity duration-300 opacity-0`; 
+        }
+
+        function updateUI() {
+            if (!state.isValidDates) return;
+            document.getElementById('stayDetails').textContent = state.stayType === 'day' ? `Day Tour • ${state.pax} Guests` : `${state.totalNights} Night(s) • ${state.pax} Guests`;
+            document.getElementById('basePriceDisplay').textContent = '₱' + state.baseTotal.toLocaleString('en-PH');
+            
+            const row = document.getElementById('discountRow');
+            if (state.discountApplied > 0) {
+                row.classList.remove('hidden'); row.classList.add('flex');
+                document.getElementById('discountDisplay').textContent = '-₱' + state.discountApplied.toLocaleString('en-PH');
+            } else { row.classList.add('hidden'); row.classList.remove('flex'); }
+
+            document.getElementById('finalTotalDisplay').textContent = '₱' + Math.max(0, state.baseTotal - state.discountApplied).toLocaleString('en-PH');
+            summaryCard.classList.add('show'); submitBtn.disabled = false;
+        }
+
+        function showToast(title, msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastTitle').textContent = title;
+            document.getElementById('toastMessage').textContent = msg;
+            toast.classList.remove('hidden'); 
+            setTimeout(() => { toast.classList.remove('opacity-0', '-translate-y-4'); toast.classList.add('opacity-100', 'translate-y-0'); }, 10);
+            setTimeout(() => { 
+                toast.classList.remove('opacity-100', 'translate-y-0'); toast.classList.add('opacity-0', '-translate-y-4'); 
+                setTimeout(() => toast.classList.add('hidden'), 500); 
+            }, 4000);
+        }
+
+        function toggleManageModal(show) {
+            const modal = document.getElementById('manageModal');
+            if(show) { modal.classList.remove('hidden'); setTimeout(() => modal.classList.add('active'), 10); } 
+            else { modal.classList.remove('active'); setTimeout(() => modal.classList.add('hidden'), 400); }
+        }
+
+        function formatUIDate(dateStr) {
+            if (!dateStr) return '';
+            const [y, m, d] = dateStr.split('-');
+            return new Date(y, m - 1, d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+        }
+
+        let lastSearchEmail = "";
+        let lastSearchData = "";
+
+        async function findMyBookings(isAuto = false) {
+            const email = document.getElementById('searchEmail').value.trim();
+            if(!email) return;
+            
+            lastSearchEmail = email;
+            const list = document.getElementById('myBookingsList');
+            const searchBtn = document.getElementById('searchBtn');
+
+            if(!isAuto) {
+                searchBtn.innerHTML = '...';
+                list.innerHTML = '<div class="flex justify-center py-8"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-luxury-dark"></div></div>';
+            }
+
+            try {
+                const res = await fetch(`http://localhost:3000/api/bookings/search?email=${encodeURIComponent(email)}`);
+                const rawData = await res.text();
+                
+                if (isAuto && rawData === lastSearchData) return;
+                lastSearchData = rawData;
+                
+                const bookings = JSON.parse(rawData);
+                
+                list.innerHTML = '';
+                if(bookings.length === 0) { list.innerHTML = '<p class="text-center text-gray-400 text-sm py-4 font-medium">No reservations found for this email.</p>'; searchBtn.innerHTML = 'Search'; return; }
+
+                bookings.forEach(b => {
+                    const fCheckIn = formatUIDate(b.checkIn);
+                    const fCheckOut = formatUIDate(b.checkOut);
+                    const dates = b.stayType === 'overnight' ? `${fCheckIn} to ${fCheckOut}` : fCheckIn;
+                    
+                    let actionBtn = `<button onclick="cancelMyBooking('${b._id}')" class="px-5 py-2.5 bg-rose-50 text-rose-600 border border-rose-100 shadow-sm rounded-xl text-xs font-bold hover:bg-rose-100 transition-colors mt-3 sm:mt-0">Cancel Booking</button>`;
+                    const payStatusColor = b.paymentStatus === 'Paid' ? 'text-emerald-600' : 'text-rose-500';
+
+                    list.innerHTML += `
+                    <div class="bg-white p-6 rounded-[1.5rem] border border-luxury-border flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-sm hover:shadow-md transition-shadow ${b.status === 'Cancelled' ? 'opacity-50 grayscale' : ''}">
+                        <div>
+                            <p class="font-bold text-luxury-dark text-lg">${dates}</p>
+                            <p class="text-xs text-gray-500 font-bold mt-1 tracking-widest uppercase">Status: <span class="${b.status === 'Confirmed' ? 'text-emerald-600' : (b.status === 'Pending' ? 'text-luxury-gold' : 'text-rose-500')}">${b.status}</span></p>
+                            <p class="text-xs text-gray-500 font-bold mt-1 tracking-widest uppercase">Payment: <span class="${payStatusColor}">${b.paymentStatus}</span></p>
+                        </div>
+                        ${b.status !== 'Cancelled' ? actionBtn : ''}
+                    </div>`;
+                });
+            } catch(e) { if(!isAuto) list.innerHTML = '<p class="text-center text-rose-500 text-sm py-4 font-bold">Error finding bookings. Is server running?</p>'; }
+            if(!isAuto) searchBtn.innerHTML = 'Search';
+        }
+
+        setInterval(() => {
+            if (document.getElementById('manageModal').classList.contains('active') && lastSearchEmail) {
+                findMyBookings(true);
+            }
+        }, 3000);
+
+        async function cancelMyBooking(id) {
+            if(!confirm("Are you sure you want to permanently cancel this reservation?")) return;
+            try {
+                await fetch(`http://localhost:3000/api/bookings/${id}?source=customer`, { method: 'DELETE' });
+                showToast("Cancelled", "Reservation removed successfully.");
+                findMyBookings(); 
+                fetchUnavailableDates(); 
+            } catch (e) { alert("Failed to cancel."); }
+        }
+
+        document.getElementById('bookingForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const finalPrice = Math.max(0, state.baseTotal - state.discountApplied);
+            const originalHtml = submitBtn.innerHTML;
+            
+            submitBtn.innerHTML = `Processing...`; submitBtn.disabled = true;
+
+            const bookingData = {
+                guestName: document.getElementById('fullName').value, 
+                email: document.getElementById('email').value,
+                phone: document.getElementById('phone').value,
+                stayType: state.stayType, 
+                checkIn: checkInDateStr, 
+                checkOut: state.stayType === 'day' ? checkInDateStr : checkOutDateStr,
+                checkInTime: document.getElementById('checkInTime').value, 
+                checkOutTime: document.getElementById('checkOutTime').value, 
+                paymentMode: document.querySelector('input[name="paymentMode"]:checked').value, 
+                pax: state.pax, 
+                totalCost: finalPrice, 
+                promoCode: state.promoCodeStr
+            };
+
+            try {
+                const response = await fetch('http://localhost:3000/api/bookings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(bookingData) });
+                if (response.ok) {
+                    showToast("Reservation Sent!", `Total: ₱${finalPrice.toLocaleString('en-PH')} for ${state.pax} pax`);
+                    
+                    document.getElementById('bookingForm').reset(); 
+                    fpCheckIn.clear(); 
+                    fpCheckOut.clear(); 
+                    document.getElementById('checkInTimeDisplay').value = '02:00 PM';
+                    document.getElementById('checkInTime').value = '14:00';
+                    document.getElementById('checkOutTimeDisplay').value = '12:00 PM';
+                    document.getElementById('checkOutTime').value = '12:00';
+                    
+                    state.discountApplied = 0;
+                    state.promoCodeStr = 'None';
+                    document.getElementById('promoInput').value = '';
+                    clearPromoMsg();
+                    
+                    invalidateSummary();
+                    fetchUnavailableDates(); 
+                } else alert('Error saving booking.');
+            } catch (error) { alert('Connection refused. Run "node server.js".'); } 
+            finally { submitBtn.innerHTML = originalHtml; submitBtn.disabled = false; }
+        });
+    </script>
+</body>
+</html>
