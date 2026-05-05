@@ -30,22 +30,34 @@ console.log('📧 Email Transporter configured successfully for:', MY_GMAIL);
 // THE STRICT IPv4 TRANSPORTER
 // We removed `service: 'gmail'` so Nodemailer stops forcing IPv6
 const transporter = nodemailer.createTransport({
+    // We use the common name but force the family to 4 (IPv4)
     host: "smtp.gmail.com",
-    port: 465,
-    secure: true, // Use SSL
+    port: 465, 
+    secure: true,
     auth: {
-        user: process.env.MY_GMAIL || "feloniacarl34@gmail.com", // Double-check spelling here!
+        user: "feloniacarl34@gmail.com", //
         pass: process.env.MY_APP_PASSWORD,
     },
-    // THIS IS THE CRITICAL FIX FOR ENETUNREACH
-    connectionTimeout: 10000, // 10 seconds
-    greetingTimeout: 10000,
-    socketTimeout: 10000,
-    dnsProjection: "ipv4first", // Ensures it looks for IPv4 addresses first
+    // This forces the connection to stay on IPv4
+    family: 4, 
+    // Increased timeouts to handle the "Cold Start" lag on Render
+    connectionTimeout: 20000, 
+    greetingTimeout: 20000,
+    socketTimeout: 20000,
     tls: {
-        // This helps prevent connection drops on some cloud networks
-        rejectUnauthorized: false
+        // Prevents the "Self-signed certificate" error common in cloud environments
+        rejectUnauthorized: false 
     }
+});
+
+// Add this verification block to your server.js
+// It will tell you in the logs exactly why it's failing when it starts up
+transporter.verify(function (error, success) {
+  if (error) {
+    console.log("Transporter Error:", error);
+  } else {
+    console.log("Server is ready to take our messages");
+  }
 });
 
 app.use('/public', express.static('public'));
