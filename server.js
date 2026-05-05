@@ -24,15 +24,16 @@ const MY_APP_PASS = process.env.MY_APP_PASS;  // Pulls from .env
 const ADMIN_EMAIL = 'feloniacarl34@gmail.com';// Your receiving admin email
 
 const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
+  host: '74.125.202.108', // This is the direct IPv4 for smtp.gmail.com
   port: 587,
-  secure: false, // Must be false for port 587
+  secure: false, 
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS
   },
   tls: {
-    rejectUnauthorized: false // Helps avoid connection issues on cloud hosts
+    rejectUnauthorized: false,
+    servername: 'smtp.gmail.com' // Crucial when using a direct IP
   }
 });
 
