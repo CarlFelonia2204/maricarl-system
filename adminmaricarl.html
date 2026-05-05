@@ -333,7 +333,7 @@
         async function updateBookingStatus(btn, id, newStatus) {
             btn.innerHTML = '...'; btn.disabled = true;
             try {
-                await fetch(`https://maricarl-backend.onrender.com/api/bookings/$){id}/status`, { 
+                await fetch(`https://maricarl-backend.onrender.com/api/bookings/${id}/status`, { 
                     method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: newStatus })
                 });
                 showToast(`Approved! Email sent & Calendar updated.`); 
@@ -344,7 +344,7 @@
         async function markAsPaid(btn, id) {
             btn.innerHTML = '...'; btn.disabled = true;
             try {
-                const res = await fetch(`https://maricarl-backend.onrender.com/api/bookings/$){id}/pay`, { method: 'PATCH' });
+                const res = await fetch(`https://maricarl-backend.onrender.com/api/bookings/${id}/pay`, { method: 'PATCH' });
                 if(res.ok) {
                     showToast("Payment marked as Paid & receipt sent!"); 
                     await loadBookings(); 
@@ -356,7 +356,7 @@
             if(!confirm("Are you sure you want to completely remove this booking?")) return;
             btn.innerHTML = '...'; btn.disabled = true;
             try {
-                const res = await fetch(`https://maricarl-backend.onrender.com/api/bookings/$){id}?source=admin`, { method: 'DELETE' });
+                const res = await fetch(`https://maricarl-backend.onrender.com/api/bookings/${id}?source=admin`, { method: 'DELETE' });
                 if(res.ok) {
                     showToast(`Reservation successfully deleted.`); 
                     await loadBookings(); 
