@@ -32,26 +32,32 @@ console.log('📧 Email Transporter configured successfully for:', MY_GMAIL);
 const transporter = nodemailer.createTransport({
     host: "smtp.gmail.com",
     port: 587,
-    secure: false, // Must be false for port 587
+    secure: false, // Use STARTTLS
     auth: {
         user: "feloniacarl34@gmail.com",
         pass: process.env.MY_APP_PASSWORD,
     },
-    // FORCING IPV4 ONLY
-    family: 4, 
+    // FORCE IPv4 and keep connection alive
+    family: 4,
+    pool: true, 
+    maxConnections: 3,
+    // INCREASE PATIENCE (Timeouts)
+    connectionTimeout: 30000, // 30 seconds
+    greetingTimeout: 30000,
+    socketTimeout: 30000,
     tls: {
-        // Essential for port 587 and cloud hosting
-        ciphers: 'SSLv3',
-        rejectUnauthorized: false
+        // Essential for bypassing cloud network restrictions
+        rejectUnauthorized: false,
+        minVersion: "TLSv1.2"
     }
 });
 
-// This is the key part to check if it's working immediately
+// Verification check
 transporter.verify((error, success) => {
     if (error) {
-        console.log("❌ Email System Error:", error.message);
+        console.log("❌ Email Error:", error.message);
     } else {
-        console.log("✅ Email System is Ready!");
+        console.log("✅ EMAIL SYSTEM ONLINE");
     }
 });
 
