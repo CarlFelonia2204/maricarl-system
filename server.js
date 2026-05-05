@@ -24,8 +24,16 @@ const MY_APP_PASS = process.env.MY_APP_PASS;  // Pulls from .env
 const ADMIN_EMAIL = 'feloniacarl34@gmail.com';// Your receiving admin email
 
 const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: { user: MY_GMAIL, pass: MY_APP_PASS }
+  host: 'smtp.gmail.com',
+  port: 587,
+  secure: false, // Must be false for port 587
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS
+  },
+  tls: {
+    rejectUnauthorized: false // Helps avoid connection issues on cloud hosts
+  }
 });
 
 app.use('/public', express.static('public'));
