@@ -30,17 +30,22 @@ console.log('📧 Email Transporter configured successfully for:', MY_GMAIL);
 // THE STRICT IPv4 TRANSPORTER
 // We removed `service: 'gmail'` so Nodemailer stops forcing IPv6
 const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 465,
-  secure: true, // true for 465, false for other ports
-  auth: {
-    user: MY_GMAIL,
-    pass: MY_APP_PASS
-  },
-  tls: {
-    // Stops certificate check timeouts
-    rejectUnauthorized: false
-  }
+    host: "smtp.gmail.com",
+    port: 465,
+    secure: true, // Use SSL
+    auth: {
+        user: process.env.MY_GMAIL || "feloniacarl34@gmail.com", // Double-check spelling here!
+        pass: process.env.MY_APP_PASSWORD,
+    },
+    // THIS IS THE CRITICAL FIX FOR ENETUNREACH
+    connectionTimeout: 10000, // 10 seconds
+    greetingTimeout: 10000,
+    socketTimeout: 10000,
+    dnsProjection: "ipv4first", // Ensures it looks for IPv4 addresses first
+    tls: {
+        // This helps prevent connection drops on some cloud networks
+        rejectUnauthorized: false
+    }
 });
 
 app.use('/public', express.static('public'));
