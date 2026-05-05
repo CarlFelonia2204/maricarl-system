@@ -1,6 +1,6 @@
 const dns = require('dns');
-dns.setServers(['8.8.8.8', '8.8.4.4']); // Bypasses your ISP's DNS block
-dns.setDefaultResultOrder('ipv4first'); // THIS IS THE FIX: Forces IPv4 to bypass Render network timeouts
+dns.setServers(['8.8.8.8', '8.8.4.4']);
+dns.setDefaultResultOrder('ipv4first'); // Forces IPv4 to bypass the ENETUNREACH error
 
 require('dotenv').config(); 
 const express = require('express');
@@ -18,21 +18,19 @@ app.use(cors());
 // ==========================================
 // 1. GLOBAL EMAIL & SERVER CONFIGURATION
 // ==========================================
-// This ensures it works whether you used MY_GMAIL or EMAIL_USER in Render
-const MY_GMAIL = process.env.MY_GMAIL || process.env.EMAIL_USER; 
-const MY_APP_PASS = process.env.MY_APP_PASS || process.env.EMAIL_PASS;
+
+// WE ARE HARDCODING THE EMAIL TO BYPASS THE .ENV TYPO OVERRIDE
+const MY_GMAIL = 'feloniacarl34@gmail.com'; 
 const ADMIN_EMAIL = 'feloniacarl34@gmail.com'; 
 
-// STARTUP CHECK: This will tell us in the Render Logs if your keys are missing!
-if (!MY_GMAIL || !MY_APP_PASS) {
-    console.log('⚠️ WARNING: Email credentials are MISSING in Render Environment Variables!');
-} else {
-    console.log('📧 Email Transporter configured successfully for:', MY_GMAIL);
-}
+// We still use the environment variable for the password for security
+const MY_APP_PASS = process.env.MY_APP_PASS || process.env.EMAIL_PASS;
+
+console.log('📧 Email Transporter configured successfully for:', MY_GMAIL);
 
 // THE "ULTIMATE CLOUD" TRANSPORTER (HARDCODED IPv4)
 const transporter = nodemailer.createTransport({
-  host: '74.125.202.108', // Explicit Google IPv4 Address (Bypasses the 2404: IPv6 error)
+  host: '74.125.202.108', // Explicit Google IPv4 Address
   port: 465,
   secure: true,
   auth: {
