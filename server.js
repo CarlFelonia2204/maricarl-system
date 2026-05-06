@@ -2,7 +2,6 @@ require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
-const { Resend } = require('resend'); // Replaced Nodemailer
 
 const app = express();
 
@@ -17,9 +16,36 @@ app.use(cors());
 // 1. GLOBAL EMAIL & SERVER CONFIGURATION
 // ==========================================
 const ADMIN_EMAIL = 'feloniacarl34@gmail.com'; 
+const SENDER_EMAIL = 'feloniacarl34@gmail.com'; 
 
-// Initialize Resend with your API Key from Render Environment Variables
-const resend = new Resend(process.env.RESEND_API_KEY);
+// --- BREVO API INTEGRATION (Bypasses Render Firewall) ---
+const sendEmail = async (toEmail, subjectLine, htmlContent) => {
+    const brevoKey = process.env.BREVO_API_KEY;
+    if (!brevoKey) {
+        console.error("❌ MISSING BREVO_API_KEY in Render Env Vars!");
+        return;
+    }
+    
+    try {
+        await fetch('https://api.brevo.com/v3/smtp/email', {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'api-key': brevoKey,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ 
+                sender: { email: SENDER_EMAIL, name: "Maricarl Resort" },
+                to: [{ email: toEmail }], 
+                subject: subjectLine, 
+                htmlContent: htmlContent 
+            })
+        });
+        console.log(`✅ Email sent successfully in background to: ${toEmail}`);
+    } catch (error) {
+        console.error("❌ Email Error:", error.message);
+    }
+};
 
 app.use('/public', express.static('public'));
 
@@ -123,13 +149,8 @@ setInterval(async () => {
                         <p>We hope to welcome you back again soon.</p>
                         <p>Warm regards,<br><strong>The Maricarl Resort Team</strong></p>
                     `;
-                    resend.emails.send({
-                        from: 'Maricarl Resort <onboarding@resend.dev>',
-                        to: b.email,
-                        subject: `Thank You for Staying at Maricarl Resort!`,
-                        html: generateHTML('We Hope You Enjoyed Your Stay', thankYouContent)
-                    }).then(({error}) => { if(error) console.log("Resend Error (Thank You):", error.message); })
-                      .catch(e => console.log("Background email error (Thank You):", e.message));
+                    
+                    sendEmail(b.email, "Thank You for Staying at Maricarl Resort!", generateHTML('We Hope You Enjoyed Your Stay', thankYouContent));
                     
                     b.thankYouSent = true;
                     await b.save();
@@ -141,13 +162,8 @@ setInterval(async () => {
                         <p>Please proceed to our staff or complete your GCash transfer so we can officially mark your reservation as paid.</p>
                         <p>Thank you!</p>
                     `;
-                    resend.emails.send({
-                        from: 'Maricarl Resort <onboarding@resend.dev>',
-                        to: b.email,
-                        subject: `Payment Reminder - Maricarl Resort`,
-                        html: generateHTML('Pending Balance Reminder', reminderContent)
-                    }).then(({error}) => { if(error) console.log("Resend Error (Reminder):", error.message); })
-                      .catch(e => console.log("Background email error (Reminder):", e.message));
+                    
+                    sendEmail(b.email, "Payment Reminder - Maricarl Resort", generateHTML('Pending Balance Reminder', reminderContent));
                     
                     b.reminderSent = true;
                     await b.save();
@@ -203,13 +219,7 @@ app.patch('/api/bookings/:id/pay', async (req, res) => {
             <p style="margin-top: 35px; text-align: center;">Thank you!</p>
         `;
 
-        resend.emails.send({
-            from: 'Maricarl Resort <onboarding@resend.dev>',
-            to: booking.email,
-            subject: `Payment Confirmed - Maricarl Resort`,
-            html: generateHTML('Payment Received', receiptContent)
-        }).then(({error}) => { if(error) console.log("Resend Error (Receipt):", error.message); })
-          .catch(e => console.log("Background email error (Receipt):", e.message));
+        sendEmail(booking.email, "Payment Confirmed - Maricarl Resort", generateHTML('Payment Received', receiptContent));
 
         const checkOutDateStr = booking.stayType === 'day' ? booking.checkIn : booking.checkOut;
         const timeStr = booking.checkOutTime || '12:00'; 
@@ -231,13 +241,7 @@ app.patch('/api/bookings/:id/pay', async (req, res) => {
                     <p>Warm regards,<br><strong>The Maricarl Resort Team</strong></p>
                 `;
                 
-                resend.emails.send({
-                    from: 'Maricarl Resort <onboarding@resend.dev>',
-                    to: booking.email,
-                    subject: `Thank You for Staying at Maricarl Resort!`,
-                    html: generateHTML('We Hope You Enjoyed Your Stay', thankYouContent)
-                }).then(({error}) => { if(error) console.log("Resend Error (Thank You Delayed):", error.message); })
-                  .catch(e => console.log("Background email error (Thank You Delayed):", e.message));
+                sendEmail(booking.email, "Thank You for Staying at Maricarl Resort!", generateHTML('We Hope You Enjoyed Your Stay', thankYouContent));
                 
                 booking.thankYouSent = true;
                 await booking.save();
@@ -302,13 +306,7 @@ app.post('/api/bookings', async (req, res) => {
             <p style="margin-top: 30px; text-align: center; color: #64748B;">Log in to the Admin OS to approve or reject this booking.</p>
         `;
 
-        resend.emails.send({
-            from: 'Maricarl Resort <onboarding@resend.dev>',
-            to: ADMIN_EMAIL, 
-            subject: `New Reservation Request: ${newBooking.guestName}`,
-            html: generateHTML('Action Required: New Booking', adminContent)
-        }).then(({error}) => { if(error) console.log("Resend Error (New Booking):", error.message); })
-          .catch(e => console.log("Background email error (New Booking):", e.message));
+        sendEmail(ADMIN_EMAIL, `New Reservation Request: ${newBooking.guestName}`, generateHTML('Action Required: New Booking', adminContent));
 
     } catch (error) { 
         console.error("Critical Error:", error);
@@ -406,13 +404,7 @@ app.patch('/api/bookings/:id/status', async (req, res) => {
                 <p style="margin-top: 35px; text-align: center;">We look forward to hosting you!</p>
             `;
 
-            resend.emails.send({
-                from: 'Maricarl Resort <onboarding@resend.dev>',
-                to: updated.email,
-                subject: `Reservation Confirmed - Maricarl Resort`,
-                html: generateHTML('Your Booking is Confirmed', customerContent)
-            }).then(({error}) => { if(error) console.log("Resend Error (Approval):", error.message); })
-              .catch(e => console.log("Background email error (Approval):", e.message));
+            sendEmail(updated.email, "Reservation Confirmed - Maricarl Resort", generateHTML('Your Booking is Confirmed', customerContent));
         }
     } catch (error) { 
         if (!res.headersSent) res.status(500).json({ error: 'Failed' }); 
@@ -443,13 +435,7 @@ app.delete('/api/bookings/:id', async (req, res) => {
                 <p>If you believe this was a mistake, or if you would like to book a different date, please submit a new reservation request on our website.</p>
                 <p>Thank you for considering Maricarl Resort.</p>
             `;
-            resend.emails.send({
-                from: 'Maricarl Resort <onboarding@resend.dev>',
-                to: bookingToDelete.email,
-                subject: `Reservation Canceled - Maricarl Resort`,
-                html: generateHTML('Reservation Canceled', cancelContent)
-            }).then(({error}) => { if(error) console.log("Resend Error (Admin Cancel):", error.message); })
-              .catch(e => console.log("Background email error (Admin Cancel):", e.message));
+            sendEmail(bookingToDelete.email, "Reservation Canceled - Maricarl Resort", generateHTML('Reservation Canceled', cancelContent));
         }
 
         if (source === 'customer') {
@@ -465,26 +451,14 @@ app.delete('/api/bookings/:id', async (req, res) => {
                 </table>
                 <p>This booking has been permanently removed from your dashboard and calendar.</p>
             `;
-            resend.emails.send({
-                from: 'Maricarl Resort <onboarding@resend.dev>',
-                to: ADMIN_EMAIL,
-                subject: `⚠️ Guest Cancellation: ${bookingToDelete.guestName}`,
-                html: generateHTML('Guest Cancellation Alert', adminAlertContent)
-            }).then(({error}) => { if(error) console.log("Resend Error (Customer Cancel Admin Alert):", error.message); })
-              .catch(e => console.log("Background email error (Customer Cancel Admin Alert):", e.message));
+            sendEmail(ADMIN_EMAIL, `⚠️ Guest Cancellation: ${bookingToDelete.guestName}`, generateHTML('Guest Cancellation Alert', adminAlertContent));
             
             const receiptContent = `
                 <p>Dear <strong>${bookingToDelete.guestName}</strong>,</p>
                 <p>This email is to confirm that your reservation for <strong>${stayDates}</strong> has been <span style="color: #E11D48; font-weight: bold;">successfully canceled</span> as requested.</p>
                 <p>We hope to welcome you to Maricarl Resort in the future. If this was a mistake, please visit our website to make a new reservation.</p>
             `;
-            resend.emails.send({
-                from: 'Maricarl Resort <onboarding@resend.dev>',
-                to: bookingToDelete.email,
-                subject: `Cancellation Confirmed - Maricarl Resort`,
-                html: generateHTML('Cancellation Processed', receiptContent)
-            }).then(({error}) => { if(error) console.log("Resend Error (Customer Cancel Receipt):", error.message); })
-              .catch(e => console.log("Background email error (Customer Cancel Receipt):", e.message));
+            sendEmail(bookingToDelete.email, "Cancellation Confirmed - Maricarl Resort", generateHTML('Cancellation Processed', receiptContent));
         }
     } catch (error) { 
         console.error(error);
