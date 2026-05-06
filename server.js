@@ -1,3 +1,10 @@
+// ==========================================
+// FORCING IPV4 AT THE START OF THE APP (DO NOT DELETE)
+// This fixes the ECONNREFUSED error on local PH networks
+// ==========================================
+const dns = require('dns');
+dns.setDefaultResultOrder('ipv4first');
+
 require('dotenv').config(); 
 const express = require('express');
 const mongoose = require('mongoose');
@@ -22,7 +29,7 @@ const SENDER_EMAIL = 'feloniacarl34@gmail.com';
 const sendEmail = async (toEmail, subjectLine, htmlContent) => {
     const brevoKey = process.env.BREVO_API_KEY;
     if (!brevoKey) {
-        console.error("❌ MISSING BREVO_API_KEY in Render Env Vars!");
+        console.error("❌ MISSING BREVO_API_KEY in Environment Variables!");
         return;
     }
     
@@ -41,8 +48,7 @@ const sendEmail = async (toEmail, subjectLine, htmlContent) => {
                 htmlContent: htmlContent 
             })
         });
-        
-        // This will grab the actual error message from Brevo
+
         const data = await response.json().catch(() => null); 
         
         if (!response.ok) {
