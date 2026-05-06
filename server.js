@@ -23,9 +23,8 @@ app.use(cors());
 const MY_GMAIL = 'feloniacarl34@gmail.com'; 
 const ADMIN_EMAIL = 'feloniacarl34@gmail.com'; 
 
-// We pull the 16-character app password from Render's Environment
-// Making sure it matches exactly what you put in the Render dashboard
-const MY_APP_PASSWORD = process.env.MY_APP_PASSWORD || process.env.MY_APP_PASSWORD;
+// ---> THIS IS THE LINE YOUR CODE IS MISSING <---
+const MY_APP_PASS = process.env.MY_APP_PASSWORD || process.env.MY_APP_PASS;
 
 // ==========================================
 // 2. NODEMAILER TRANSPORTER SETUP
@@ -36,11 +35,9 @@ const transporter = nodemailer.createTransport({
     secure: true,
     auth: {
         user: MY_GMAIL,
-        pass: MY_APP_PASS, 
+        pass: MY_APP_PASS, // <--- This is line 39 that crashed because the line above was missing
     },
-    // Forcing IPv4 to prevent the ENETUNREACH error
     family: 4, 
-    // Extra patience for Render's cold starts
     connectionTimeout: 20000 
 });
 
