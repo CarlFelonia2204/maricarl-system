@@ -27,7 +27,7 @@ const sendEmail = async (toEmail, subjectLine, htmlContent) => {
     }
     
     try {
-        await fetch('https://api.brevo.com/v3/smtp/email', {
+        const response = await fetch('https://api.brevo.com/v3/smtp/email', {
             method: 'POST',
             headers: {
                 'Accept': 'application/json',
@@ -41,9 +41,17 @@ const sendEmail = async (toEmail, subjectLine, htmlContent) => {
                 htmlContent: htmlContent 
             })
         });
-        console.log(`✅ Email sent successfully in background to: ${toEmail}`);
+        
+        // This will grab the actual error message from Brevo
+        const data = await response.json().catch(() => null); 
+        
+        if (!response.ok) {
+            console.error(`❌ Brevo Blocked Email to ${toEmail}:`, data);
+        } else {
+            console.log(`✅ Brevo Sent Email to: ${toEmail} | Message ID:`, data?.messageId);
+        }
     } catch (error) {
-        console.error("❌ Email Error:", error.message);
+        console.error("❌ Network Fetch Error:", error.message);
     }
 };
 
