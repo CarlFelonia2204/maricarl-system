@@ -9,47 +9,49 @@ const cors = require('cors');
 const nodemailer = require('nodemailer');
 
 const app = express();
+
 app.get('/', (req, res) => {
   res.send('Maricarl Resort Backend is Live and Running!');
 });
+
 app.use(express.json());
 app.use(cors());
 
 // ==========================================
 // 1. GLOBAL EMAIL & SERVER CONFIGURATION
 // ==========================================
-
 const MY_GMAIL = 'feloniacarl34@gmail.com'; 
 const ADMIN_EMAIL = 'feloniacarl34@gmail.com'; 
 
 // We pull the 16-character app password from Render's Environment
-const MY_APP_PASS = process.env.MY_APP_PASS || process.env.EMAIL_PASS;
+// Making sure it matches exactly what you put in the Render dashboard
+const MY_APP_PASS = process.env.MY_APP_PASSWORD || process.env.MY_APP_PASS;
 
-console.log('📧 Email Transporter configured successfully for:', MY_GMAIL);
+// ==========================================
+// 2. NODEMAILER TRANSPORTER SETUP
+// ==========================================
+const transporter = nodemailer.createTransport({
+    host: "smtp.gmail.com",
+    port: 465,
+    secure: true,
+    auth: {
+        user: MY_GMAIL,
+        pass: MY_APP_PASS, 
+    },
+    // Forcing IPv4 to prevent the ENETUNREACH error
+    family: 4, 
+    // Extra patience for Render's cold starts
+    connectionTimeout: 20000 
+});
 
-// THE STRICT IPv4 TRANSPORTER
-// We removed `service: 'gmail'` so Nodemailer stops forcing IPv6
-// 1. At the top of server.js
-const sgMail = require('@sendgrid/mail');
-sgMail.setApiKey(process.env.SENDGRID_API_KEY);
-
-// 2. Replace your old sendEmail function with this:
-const sendEmail = async (bookingDetails) => {
-    const msg = {
-        to: 'feloniacarl34@gmail.com', // Your corrected email
-        from: 'your-verified-sendgrid-sender@email.com', // Must be verified in SendGrid
-        subject: 'New Booking Received!',
-        text: `New booking from ${bookingDetails.name}`,
-        html: `<strong>New booking from ${bookingDetails.name}</strong>`,
-    };
-
-    try {
-        await sgMail.send(msg);
-        console.log('✅ Email sent via SendGrid Web API');
-    } catch (error) {
-        console.error('❌ SendGrid Error:', error.response ? error.response.body : error.message);
+// Verify the connection immediately on startup
+transporter.verify((error, success) => {
+    if (error) {
+        console.log("❌ Nodemailer Error:", error.message);
+    } else {
+        console.log("✅ Nodemailer System is Ready for:", MY_GMAIL);
     }
-};
+});
 
 app.use('/public', express.static('public'));
 
