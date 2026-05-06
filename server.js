@@ -25,7 +25,7 @@ const ADMIN_EMAIL = 'feloniacarl34@gmail.com';
 
 // We pull the 16-character app password from Render's Environment
 // Making sure it matches exactly what you put in the Render dashboard
-const MY_APP_PASS = process.env.MY_APP_PASSWORD || process.env.MY_APP_PASS;
+const MY_APP_PASSWORD = process.env.MY_APP_PASSWORD || process.env.MY_APP_PASSWORD;
 
 // ==========================================
 // 2. NODEMAILER TRANSPORTER SETUP
