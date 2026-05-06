@@ -136,7 +136,12 @@ const Promo = mongoose.model('Promo', promoSchema);
 // --- 4. BACKGROUND TASK: AUTOMATED REMINDERS & THANK YOU EMAILS ---
 setInterval(async () => {
     try {
-        const now = new Date();
+        // 1. Get current time and adjust to Philippine Time (UTC+8)
+        const nowUTC = new Date();
+        const phtOffset = 8 * 60 * 60 * 1000; 
+        const nowPHT = new Date(nowUTC.getTime() + phtOffset);
+
+        // 2. Fetch bookings that still need emails
         const pastBookings = await Booking.find({ 
             status: 'Confirmed', 
             $or: [{ thankYouSent: false }, { reminderSent: false }] 
@@ -149,43 +154,49 @@ setInterval(async () => {
             
             const [year, month, day] = checkOutDateStr.split('-');
             const [hours, minutes] = timeStr.split(':');
+            
+            // 3. Create the target Checkout Date object
             const checkoutDate = new Date(year, month - 1, day, hours, minutes);
             
-            if (now >= checkoutDate) {
+            // 4. Compare Adjusted PHT time against the Checkout Date
+            if (nowPHT >= checkoutDate) {
+                
+                // --- THANK YOU EMAIL (Only if Paid) ---
                 if (b.paymentStatus === 'Paid' && !b.thankYouSent) {
                     const thankYouContent = `
                         <p>Dear <strong>${b.guestName}</strong>,</p>
-                        <p>Thank you for choosing Maricarl Resort for your recent stay. We hope you had a wonderful and relaxing time in our private sanctuary.</p>
-                        <p>We are always striving to improve our guest experience, and your feedback means the world to us. If you have a moment, we would love to hear about your stay!</p>
+                        <p>Thank you for choosing Maricarl Resort! We hope you had a relaxing time.</p>
                         <div style="text-align: center; margin: 40px 0;">
-                            <a href="https://share.google/IUlnx9GGUKHDU4lbE" target="_blank" style="background-color: #C5A059; color: #FFFFFF; padding: 14px 28px; text-decoration: none; font-weight: bold; border-radius: 8px; text-transform: uppercase; font-size: 14px; letter-spacing: 1px;">Leave a Review</a>
+                            <a href="https://share.google/IUlnx9GGUKHDU4lbE" target="_blank" style="background-color: #C5A059; color: #FFFFFF; padding: 14px 28px; text-decoration: none; font-weight: bold; border-radius: 8px;">Leave a Review</a>
                         </div>
-                        <p>We hope to welcome you back again soon.</p>
                         <p>Warm regards,<br><strong>The Maricarl Resort Team</strong></p>
                     `;
                     
-                    sendEmail(b.email, "Thank You for Staying at Maricarl Resort!", generateHTML('We Hope You Enjoyed Your Stay', thankYouContent));
+                    await sendEmail(b.email, "Thank You for Staying at Maricarl Resort!", generateHTML('We Hope You Enjoyed Your Stay', thankYouContent));
                     
                     b.thankYouSent = true;
                     await b.save();
+                    console.log(`✅ Thank You sent to ${b.email}`);
                 } 
+                
+                // --- PAYMENT REMINDER (If Not Paid) ---
                 else if (b.paymentStatus !== 'Paid' && !b.reminderSent) {
                     const reminderContent = `
                         <p>Dear <strong>${b.guestName}</strong>,</p>
-                        <p>We hope you enjoyed your time at Maricarl Resort! As your check-out time has arrived, this is a gentle reminder to settle your pending balance of <strong style="color: #E11D48;">₱${b.totalCost.toLocaleString('en-PH')}</strong>.</p>
-                        <p>Please proceed to our staff or complete your GCash transfer so we can officially mark your reservation as paid.</p>
-                        <p>Thank you!</p>
+                        <p>As your check-out time has arrived, this is a gentle reminder to settle your balance of <strong>₱${b.totalCost.toLocaleString('en-PH')}</strong>.</p>
+                        <p>Please complete your GCash transfer or see our staff to settle the payment. Thank you!</p>
                     `;
                     
-                    sendEmail(b.email, "Payment Reminder - Maricarl Resort", generateHTML('Pending Balance Reminder', reminderContent));
+                    await sendEmail(b.email, "Payment Reminder - Maricarl Resort", generateHTML('Pending Balance Reminder', reminderContent));
                     
                     b.reminderSent = true;
                     await b.save();
+                    console.log(`⚠️ Payment Reminder sent to ${b.email}`);
                 }
             }
         }
     } catch(e) { console.error("Automated Email error:", e.message); }
-}, 60000); 
+}, 60000); // Runs every 60 seconds
 
 // --- 5. API ROUTES - BOOKINGS ---
 
