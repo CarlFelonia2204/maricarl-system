@@ -18,6 +18,7 @@ app.get('/', (req, res) => {
 
 app.use(express.json());
 app.use(cors());
+app.use(express.static('public'));
 
 // ==========================================
 // 1. GLOBAL EMAIL & SERVER CONFIGURATION
